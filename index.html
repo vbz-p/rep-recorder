@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;800&family=Red+Hat+Text:wght@400;600&display=swap" rel="stylesheet">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <style>
-:root{--bg:#0b1433;--card:#141f47;--ink:#eef1ff;--dim:#9aa6d6;--acc:#f7e463;--hot:#e8452c;--ok:#4fc1c6;--line:#26336a}
+:root{--bg:#0b1433;--card:#141f47;--ink:#eef1ff;--dim:#9aa6d6;--acc:#f7e463;--hot:#e8452c;--ok:#4fc1c6;--go:#3ddc84;--line:#26336a}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Red Hat Text",system-ui,sans-serif;padding:max(12px,env(safe-area-inset-top)) 12px max(30px,env(safe-area-inset-bottom))}
 main{max-width:560px;margin:auto}
@@ -18,28 +18,35 @@ h2{font:800 18px "Red Hat Display",sans-serif;margin:0 0 8px}
 .steps span.on{background:var(--acc);color:var(--bg)}
 .stage{position:relative;background:#000;border-radius:18px;overflow:hidden;aspect-ratio:3/4;margin-bottom:12px}
 .stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.stage::after{content:"";position:absolute;inset:0;border-radius:18px;box-shadow:inset 0 0 0 0 var(--go);pointer-events:none}
+.stage.flash::after{animation:flash .6s ease-out}
+@keyframes flash{0%{box-shadow:inset 0 0 0 14px var(--go);background:#3ddc8433}100%{box-shadow:inset 0 0 0 0 var(--go);background:transparent}}
 video{display:none}
-#count{position:absolute;right:14px;top:6px;font:800 clamp(72px,24vw,120px)/1 "Red Hat Display",sans-serif;color:var(--acc);text-shadow:0 3px 18px #0009}
-#count.pop{animation:pop .25s}@keyframes pop{50%{transform:scale(1.15)}}
-@media(prefers-reduced-motion:reduce){#count.pop{animation:none}}
+#ring{position:absolute;right:10px;top:10px;width:clamp(120px,36vw,170px);aspect-ratio:1;filter:drop-shadow(0 3px 12px #0008)}
+#ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+#ring circle{fill:none;stroke-width:9}
+#ringBg{stroke:#ffffff30}#ringFg{stroke:var(--acc);stroke-linecap:round;transition:stroke .2s}
+#ring.done #ringFg{stroke:var(--go)}
+#count{position:absolute;inset:0;display:grid;place-items:center;font:800 clamp(52px,16vw,76px)/1 "Red Hat Display",sans-serif;color:#fff}
+#count.pop{animation:pop .35s}@keyframes pop{40%{transform:scale(1.3);color:var(--go)}}
+#plus{position:absolute;left:0;right:0;top:38%;text-align:center;font:800 clamp(70px,22vw,120px)/1 "Red Hat Display",sans-serif;color:var(--go);opacity:0;pointer-events:none;text-shadow:0 4px 24px #000}
+#plus.show{animation:plus .7s ease-out}@keyframes plus{0%{opacity:1;transform:scale(.8)}100%{opacity:0;transform:translateY(-40px) scale(1.2)}}
 #big{position:absolute;inset:0;display:grid;place-items:center;font:800 clamp(90px,30vw,180px)/1 "Red Hat Display",sans-serif;color:#fff;text-shadow:0 4px 24px #000;pointer-events:none}
 #msg{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;font-weight:600;background:linear-gradient(transparent,#000a);font-size:17px}
 #recDot{position:absolute;left:14px;top:14px;display:none;align-items:center;gap:6px;font-weight:600;background:#000a;padding:4px 10px;border-radius:999px}
 #recDot::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--hot)}
+@media(prefers-reduced-motion:reduce){#count.pop,#plus.show,.stage.flash::after{animation-duration:.01s}}
 .card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px}
 button{font:600 16px "Red Hat Text",sans-serif;min-height:48px;padding:0 16px;border-radius:12px;border:0;background:var(--acc);color:var(--bg);cursor:pointer;white-space:nowrap}
 button.sec{background:var(--line);color:var(--ink)}button.red{background:var(--hot);color:#fff}
 button:disabled{opacity:.4}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
 input{font:16px "Red Hat Text",sans-serif;min-height:48px;padding:0 12px;border-radius:12px;border:1px solid #33407a;background:#0e1838;color:var(--ink);width:100%}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 auto}.row>.n{flex:0 0 auto}
 .hint{color:var(--dim);font-size:14px;margin:8px 0 0}
 ol.tips{margin:0;padding-left:20px;color:var(--dim);font-size:15px}ol.tips li{margin:3px 0}
-.meter{height:12px;background:#0e1838;border-radius:6px;position:relative;overflow:hidden;margin-top:4px}
-.meter i{position:absolute;inset:0 auto 0 0;background:var(--ok);transition:width .08s}
-.meter b{position:absolute;top:0;bottom:0;width:2px;background:var(--hot)}
-.lbl{display:flex;justify-content:space-between;color:var(--dim);font-size:13px;margin:6px 0 4px}
-input[type=range]{min-height:32px;padding:0;border:0;background:none}
+.lbl{display:flex;justify-content:space-between;color:var(--dim);font-size:13px;margin:10px 0 0}
+input[type=range]{min-height:32px;padding:0;border:0;background:none;accent-color:var(--acc)}
 label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:14px;margin-top:10px}label.ck input{width:20px;min-height:20px}
 #tl{width:100%;height:76px;display:block;background:#0e1838;border-radius:12px;touch-action:none;cursor:pointer;margin-top:4px}
 .times{display:flex;justify-content:space-between;font-size:14px;color:var(--dim);margin:6px 0 10px;font-variant-numeric:tabular-nums}
@@ -62,7 +69,8 @@ ul li span:last-child{color:var(--dim);white-space:nowrap}
   <video id="vid" playsinline muted></video>
   <canvas id="cv"></canvas>
   <div id="recDot">REC</div>
-  <div id="count" hidden>0</div>
+  <div id="ring" hidden><svg viewBox="0 0 100 100"><circle id="ringBg" cx="50" cy="50" r="44"/><circle id="ringFg" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="276.5"/></svg><div id="count">0</div></div>
+  <div id="plus">+1</div>
   <div id="big"></div>
   <div id="msg"></div>
 </div>
@@ -109,6 +117,8 @@ ul li span:last-child{color:var(--dim);white-space:nowrap}
       <button class="sec" id="setE">End here</button>
       <button class="sec" id="auto">Auto-find</button>
     </div>
+    <div class="lbl"><span>3D smoothing</span><span id="smTxt"></span></div>
+    <input type="range" id="smooth" min="0" max="1" step="0.05" value="0.35" aria-label="3D smoothing">
     <p class="hint">Drag the yellow handles, or move the white playhead and tap Start/End here. Drag the 3D figure to rotate it.</p>
   </div>
   <div class="card">
@@ -121,9 +131,8 @@ ul li span:last-child{color:var(--dim);white-space:nowrap}
 <section data-screen="cnt" hidden>
   <div class="card">
     <h2 id="cntName"></h2>
-    <div class="lbl"><span>Match with saved rep</span><span id="scoreTxt">–</span></div>
-    <div class="meter"><i id="bar"></i><b id="thr"></b></div>
-    <div class="lbl" style="margin-top:12px"><span>Sensitivity</span><span id="sensTxt"></span></div>
+    <p class="hint" style="margin:0">The ring fills as you move through a rep. Green flash = rep counted.</p>
+    <div class="lbl"><span>Sensitivity</span><span id="sensTxt"></span></div>
     <input type="range" id="sens" min="0.15" max="0.9" step="0.025" value="0.4" aria-label="Sensitivity">
     <div class="row" style="margin-top:10px"><button id="cntGo">Start</button><button class="sec n" id="cntReset">Reset</button><button class="sec n" id="flip2">Flip</button><button class="sec n" id="cntBack">Done</button></div>
     <label class="ck"><input type="checkbox" id="speak" checked> Say the count out loud</label>
@@ -137,11 +146,14 @@ import * as THREE from "three";
 import {OrbitControls} from "three/addons/controls/OrbitControls.js";
 {
 const $=id=>document.getElementById(id);
-const N=32, BAND=6, PAD=14;
-const K=[0,11,12,13,14,15,16,23,24,25,26,27,28], KI={}; K.forEach((v,i)=>KI[v]=i);
-const BODY=K.slice(1);
+const N=40, PAD=14, RING=276.5;
+// landmarks kept: head (nose, eyes, ears), arms, hands, legs, feet
+const K=[0,2,5,7,8,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32], KI={}; K.forEach((v,i)=>KI[v]=i);
+const BODY=[0,11,12,13,14,15,16,23,24,25,26,27,28];
 const BONES=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+const SMALL=[[15,17],[15,19],[17,19],[15,21],[16,18],[16,20],[18,20],[16,22],[27,29],[29,31],[27,31],[28,30],[30,32],[28,32]];
 const ANG=[[11,13,15],[12,14,16],[23,11,13],[24,12,14],[11,23,25],[12,24,26],[23,25,27],[24,26,28]];
+const GROUND=[15,16,17,18,19,20,21,22,27,28,29,30,31,32];
 const MODEL="https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
 const WASM="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
 
@@ -152,10 +164,16 @@ const vid=$('vid'), cv=$('cv'), ctx=cv.getContext('2d');
 // ---------- storage ----------
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}};
-let mvs=load('rr2_mv',[]), logs=load('rr2_log',[]);
+let mvs=load('rr3_mv',[]), logs=load('rr3_log',load('rr2_log',[]));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const msg=t=>$('msg').textContent=t;
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+
+// ---------- vector helpers ----------
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], scl=(a,k)=>[a[0]*k,a[1]*k,a[2]*k];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2], len=a=>Math.hypot(a[0],a[1],a[2])||1e-6, nrm=a=>scl(a,1/len(a));
+const crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const clamp=x=>Math.max(-1,Math.min(1,x));
 
 // ---------- screens ----------
 function go(s){
@@ -163,7 +181,7 @@ function go(s){
   document.querySelectorAll('[data-screen]').forEach(el=>el.hidden=el.dataset.screen!==s);
   document.querySelectorAll('.steps span').forEach(el=>el.classList.toggle('on',el.dataset.s===s));
   $('camStage').hidden=!(s==='rec'||s==='cnt'); $('revStage').hidden=s!=='rev';
-  $('count').hidden=s!=='cnt'; $('recDot').style.display='none'; $('big').textContent='';
+  $('ring').hidden=s!=='cnt'; $('recDot').style.display='none'; $('big').textContent='';
   if(cdTimer){clearInterval(cdTimer);cdTimer=null}
   if(s==='rec'||s==='cnt'){try{navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{})}catch(e){}}
   else{try{wake&&wake.release()}catch(e){} wake=null}
@@ -188,14 +206,22 @@ async function ensureCam(){
 async function flip(){facing=facing==='user'?'environment':'user'; if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} await ensureCam()}
 $('flip1').onclick=flip; $('flip2').onclick=flip;
 
-// ---------- features (3D world landmarks: joint angles, wrist height, torso tilt) ----------
+// ---------- features: joint angles, wrist height, torso tilt, head yaw/pitch/roll, forearm twist, wrist bend ----------
 function features(p){
-  const P=i=>p[KI[i]];
-  const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], len=v=>Math.hypot(v[0],v[1],v[2])||1e-6;
-  const ang=([a,b,c])=>{const u=sub(P(a),P(b)),v=sub(P(c),P(b));return Math.acos(Math.max(-1,Math.min(1,(u[0]*v[0]+u[1]*v[1]+u[2]*v[2])/(len(u)*len(v)))))};
-  const mid=(a,b)=>[(P(a)[0]+P(b)[0])/2,(P(a)[1]+P(b)[1])/2,(P(a)[2]+P(b)[2])/2];
-  const sh=mid(11,12), hp=mid(23,24), t=len(sub(hp,sh));
-  return [...ANG.map(ang),(sh[1]-P(15)[1])/t,(sh[1]-P(16)[1])/t,Math.acos(Math.min(1,Math.abs(hp[1]-sh[1])/t))];
+  const P=i=>p[KI[i]], mid=(a,b)=>scl([P(a)[0]+P(b)[0],P(a)[1]+P(b)[1],P(a)[2]+P(b)[2]],.5);
+  const ang=([a,b,c])=>{const u=sub(P(a),P(b)),v=sub(P(c),P(b));return Math.acos(clamp(dot(u,v)/(len(u)*len(v))))};
+  const sh=mid(11,12), hp=mid(23,24), t=len(sub(sh,hp));
+  const up=nrm(sub(sh,hp)), xr=nrm(sub(P(11),P(12))), fwd=nrm(crs(xr,up));
+  const f=[...ANG.map(ang),(sh[1]-P(15)[1])/t,(sh[1]-P(16)[1])/t,Math.acos(Math.min(1,Math.abs(hp[1]-sh[1])/t))];
+  const em=mid(7,8), nd=nrm(sub(P(0),em)), ev=nrm(sub(P(7),P(8)));
+  f.push(Math.atan2(dot(nd,xr),dot(nd,fwd)),Math.asin(clamp(dot(nd,up))),Math.asin(clamp(dot(ev,up))));
+  for(const [e,w,ix,pk] of [[13,15,19,17],[14,16,20,18]]){
+    const a=nrm(sub(P(w),P(e))), h=sub(P(ix),P(pk)), hh=nrm(sub(h,scl(a,dot(h,a))));
+    let r=sub(fwd,scl(a,dot(fwd,a))); if(len(r)<0.25) r=sub(up,scl(a,dot(up,a))); r=nrm(r);
+    const tw=Math.atan2(dot(crs(r,hh),a),dot(r,hh)); f.push(Math.cos(tw),Math.sin(tw));
+  }
+  f.push(ang([13,15,19]),ang([14,16,20]));
+  return f;
 }
 
 // ---------- main loop ----------
@@ -205,16 +231,20 @@ function loop(now){
   if(screen==='rev'){renderRev(now);return}
   if(!(screen==='rec'||screen==='cnt')||!stream||!vid.videoWidth||!pose) return;
   const W=vid.videoWidth,H=vid.videoHeight; if(cv.width!==W){cv.width=W;cv.height=H}
+  const ts=performance.now(); if(ts<=lastTs) return; lastTs=ts;
   ctx.save(); if(facing==='user'){ctx.translate(W,0);ctx.scale(-1,1)}
   ctx.drawImage(vid,0,0,W,H);
-  const ts=performance.now(); if(ts<=lastTs){ctx.restore();return} lastTs=ts;
   const r=pose.detectForVideo(vid,ts), lm=r.landmarks?.[0], w3=r.worldLandmarks?.[0];
   let s=null, full=false;
   if(lm&&w3){
     full=BODY.every(i=>(lm[i].visibility??1)>0.6&&lm[i].x>0.01&&lm[i].x<0.99&&lm[i].y>0.01&&lm[i].y<0.99);
-    ctx.lineWidth=Math.max(3,W/150); ctx.strokeStyle=full?'#4fc1c6':'#e8452c';
-    for(const[a,b]of BONES){ctx.beginPath();ctx.moveTo(lm[a].x*W,lm[a].y*H);ctx.lineTo(lm[b].x*W,lm[b].y*H);ctx.stroke()}
-    ctx.fillStyle='#f7e463'; for(const i of BODY){ctx.beginPath();ctx.arc(lm[i].x*W,lm[i].y*H,W/110,0,7);ctx.fill()}
+    const col=full?'#4fc1c6':'#e8452c', L=i=>[lm[i].x*W,lm[i].y*H];
+    const line=(a,b,wd)=>{ctx.lineWidth=wd;ctx.beginPath();ctx.moveTo(...L(a));ctx.lineTo(...L(b));ctx.stroke()};
+    ctx.strokeStyle=col; BONES.forEach(([a,b])=>line(a,b,Math.max(3,W/150))); SMALL.forEach(([a,b])=>line(a,b,Math.max(2,W/300)));
+    const ex=(lm[7].x+lm[8].x)/2*W, ey=(lm[7].y+lm[8].y)/2*H, hr=Math.hypot((lm[7].x-lm[8].x)*W,(lm[7].y-lm[8].y)*H)*0.7;
+    ctx.lineWidth=Math.max(3,W/150); ctx.beginPath(); ctx.arc(ex,ey,Math.max(hr,8),0,7); ctx.stroke();
+    ctx.fillStyle='#f7e463'; for(const i of BODY.slice(1)){ctx.beginPath();ctx.arc(...L(i),W/110,0,7);ctx.fill()}
+    ctx.fillStyle='#e8452c'; ctx.beginPath(); ctx.arc(...L(0),W/130,0,7); ctx.fill();
     const p=K.map(i=>[w3[i].x,w3[i].y,w3[i].z]);
     sp=sp?sp.map((q,j)=>q.map((x,k)=>x+0.55*(p[j][k]-x))):p;
     s={t:ts,p:sp.map(q=>q.map(x=>Math.round(x*1000)/1000))}; s.v=features(s.p);
@@ -225,7 +255,7 @@ function loop(now){
 requestAnimationFrame(loop);
 
 // ---------- sound ----------
-function beep(f){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.15;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.1)}catch(e){}}
+function beep(f,d=.1){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.15;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 function say(t){try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(String(t)))}catch(e){}}
 const energy=(a,b)=>a.reduce((s,x,k)=>s+Math.abs(x-b[k]),0);
 
@@ -252,7 +282,7 @@ function recFrame(s,full){
     msg('Get ready…');
     if(now>=rs.cdEnd){
       $('big').textContent=''; beep(1200); say('Go');
-      Object.assign(rs,{phase:'rec',frames:[],start:now,moved:false,stillSince:0,th:Math.max(avg(rs.noise)*2.5,0.05)});
+      Object.assign(rs,{phase:'rec',frames:[],start:now,moved:false,stillSince:0,th:Math.max(avg(rs.noise)*2.5,0.08)});
       $('recStop').hidden=false; $('recDot').style.display='flex';
     }
   }else if(rs.phase==='rec'){
@@ -276,22 +306,36 @@ function finishRec(){
 
 // ---------- 2 · REVIEW ----------
 const stdv=seq=>seq[0].map((_,k)=>{const m=avg(seq.map(r=>r[k]));return Math.sqrt(avg(seq.map(r=>(r[k]-m)**2)))});
-const wd=(a,b,w)=>Math.sqrt(a.reduce((s,x,k)=>s+w[k]*(x-b[k])**2,0));
+const wd=(a,b,w)=>{let s=0;for(let k=0;k<w.length;k++){const d=a[k]-b[k];s+=w[k]*d*d}return Math.sqrt(s)};
 const normW=sd=>{const tot=sd.reduce((a,b)=>a+b,0)||1;return sd.map(x=>(x/tot)*0.85+0.15/sd.length)};
 
 function openEditor(m){
   const f=m.frames.map(fr=>features(fr.p)), n=f.length, w=normW(stdv(f));
   const e=f.map((v,i)=>i?wd(v,f[i-1],w):0);
   const es=e.map((_,i)=>avg(e.slice(Math.max(0,i-2),i+3)));
-  ed={id:m.id,frames:m.frames,f,n,w,es,s0:0,s1:n-1,ph:0,playing:true,acc:0,last:0};
-  $('nm').value=m.name||'';
-  go('rev'); initThree();
-  let minY=Infinity; for(const fr of m.frames) for(const q of fr.p) minY=Math.min(minY,-q[1]);
-  three.grid.position.y=minY-0.02; three.controls.target.set(0,minY/2,0);
+  ed={id:m.id,frames:m.frames,f,n,w,es,s0:0,s1:n-1,ph:0,playing:true,acc:0,last:0,disp:null};
+  $('nm').value=m.name||''; $('smooth').value=m.sm??0.35;
+  go('rev'); initThree(); computeDisp();
   if(m.s0!=null){ed.s0=m.s0;ed.s1=m.s1;$('rhint').textContent='Adjust the trim if needed, then save.'}
   else autoFind();
   ed.ph=ed.s0;
 }
+// display positions: three.js axes, Gaussian-smoothed over time, lowest hand/foot point on the floor
+function computeDisp(){
+  const v=+$('smooth').value; $('smTxt').textContent=v<0.05?'off':v<0.4?'light':v<0.75?'medium':'strong';
+  const fr=ed.frames, n=fr.length, sig=v*6, R=Math.ceil(sig*2.5);
+  const ker=[]; for(let k=-R;k<=R;k++) ker.push(sig>0?Math.exp(-(k*k)/(2*sig*sig)):(k===0?1:0));
+  const raw=fr.map(f=>f.p.map(q=>[q[0],-q[1],-q[2]]));
+  ed.disp=raw.map((_,i)=>{
+    const out=raw[i].map(()=>[0,0,0]); let ws=0;
+    for(let k=-R;k<=R;k++){const j=Math.min(n-1,Math.max(0,i+k)),wk=ker[k+R];ws+=wk;raw[j].forEach((q,a)=>{out[a][0]+=q[0]*wk;out[a][1]+=q[1]*wk;out[a][2]+=q[2]*wk})}
+    out.forEach(q=>{q[0]/=ws;q[1]/=ws;q[2]/=ws});
+    const lo=Math.min(...GROUND.map(g=>out[KI[g]][1])); out.forEach(q=>q[1]-=lo);
+    return out;
+  });
+}
+$('smooth').oninput=()=>{if(ed)computeDisp()};
+
 function autoFind(){
   const {f,n,w,es}=ed, mx=Math.max(...es)||1;
   let a=0,b=n-1; while(a<b&&es[a]<mx*0.2)a++; while(b>a&&es[b]<mx*0.2)b--;
@@ -319,29 +363,35 @@ function initThree(){
   const canvas=$('c3');
   const r=new THREE.WebGLRenderer({canvas,antialias:true}); r.setPixelRatio(Math.min(2,devicePixelRatio));
   const scene=new THREE.Scene(); scene.background=new THREE.Color('#0b1433');
-  const cam=new THREE.PerspectiveCamera(40,0.75,0.01,50); cam.position.set(1.9,0.5,3.2);
-  const controls=new OrbitControls(cam,canvas); controls.enableDamping=true; controls.enablePan=false;
+  const cam=new THREE.PerspectiveCamera(40,0.75,0.01,50); cam.position.set(1.9,1.4,3.4);
+  const controls=new OrbitControls(cam,canvas); controls.enableDamping=true; controls.enablePan=false; controls.target.set(0,0.85,0);
   scene.add(new THREE.HemisphereLight(0xdfe6ff,0x1a2350,1.3));
   const dl=new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(2,4,3); scene.add(dl);
-  const grid=new THREE.GridHelper(4,16,0x4fc1c6,0x26336a); scene.add(grid);
+  scene.add(new THREE.GridHelper(4,16,0x4fc1c6,0x26336a));
   const jm=new THREE.MeshStandardMaterial({color:0xf7e463,roughness:.45}), bm=new THREE.MeshStandardMaterial({color:0xeef1ff,roughness:.6});
+  const nm=new THREE.MeshStandardMaterial({color:0xe8452c,roughness:.4}), hm=new THREE.MeshStandardMaterial({color:0x4fc1c6,roughness:.5});
   const sph=new THREE.SphereGeometry(1,18,12), cyl=new THREE.CylinderGeometry(1,1,1,12);
-  const joints=K.map(k=>{const m=new THREE.Mesh(sph,k===0?bm:jm);m.scale.setScalar(k===0?0.1:0.04);scene.add(m);return m});
-  const bones=[...BONES,null].map(()=>{const m=new THREE.Mesh(cyl,bm);scene.add(m);return m});
-  three={r,scene,cam,controls,grid,joints,bones,UP:new THREE.Vector3(0,1,0)};
+  const mk=(g,m,s)=>{const o=new THREE.Mesh(g,m);if(s)o.scale.setScalar(s);scene.add(o);return o};
+  const joints=BODY.slice(1).map(k=>[k,mk(sph,jm,.04)]);
+  const tips=[17,18,19,20,21,22,29,30,31,32].map(k=>[k,mk(sph,hm,.018)]);
+  const head=mk(sph,bm,.095), nose=mk(sph,nm,.028);
+  const bones=BONES.map(b=>[b,mk(cyl,bm),.03]).concat(SMALL.map(b=>[b,mk(cyl,hm),.012]));
+  const neck=mk(cyl,bm);
+  three={r,scene,cam,controls,joints,tips,head,nose,bones,neck,UP:new THREE.Vector3(0,1,0)};
   const fit=()=>{const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()};
   new ResizeObserver(fit).observe(canvas); fit();
 }
-function setPose(p){
-  const V=p.map(q=>new THREE.Vector3(q[0],-q[1],-q[2]));
-  three.joints.forEach((m,i)=>m.position.copy(V[i]));
-  const neck=V[KI[11]].clone().add(V[KI[12]]).multiplyScalar(.5);
-  const pairs=[...BONES.map(([a,b])=>[V[KI[a]],V[KI[b]]]),[V[0],neck]];
-  pairs.forEach(([a,b],j)=>{const m=three.bones[j],d=b.clone().sub(a),L=d.length()||1e-3;
-    m.position.copy(a).add(b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(three.UP,d.divideScalar(L)); m.scale.set(.03,L,.03)});
+function setPose(d){
+  const V=i=>{const q=d[KI[i]];return new THREE.Vector3(q[0],q[1],q[2])};
+  const T=three, seg=(m,a,b,r)=>{const dv=b.clone().sub(a),L=dv.length()||1e-3;m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(T.UP,dv.divideScalar(L));m.scale.set(r,L,r)};
+  T.joints.forEach(([k,m])=>m.position.copy(V(k))); T.tips.forEach(([k,m])=>m.position.copy(V(k)));
+  T.bones.forEach(([[a,b],m,r])=>seg(m,V(a),V(b),r));
+  const ear=V(7).add(V(8)).multiplyScalar(.5), sh=V(11).add(V(12)).multiplyScalar(.5);
+  T.head.position.copy(ear); T.nose.position.copy(V(0).sub(ear).multiplyScalar(1.15).add(ear));
+  seg(T.neck,sh,ear,.03);
 }
 function renderRev(now){
-  if(!ed||!three) return;
+  if(!ed||!three||!ed.disp) return;
   const dt=ed.last?Math.min(100,now-ed.last):0; ed.last=now; const fr=ed.frames;
   if(ed.playing){
     if(ed.ph<ed.s0||ed.ph>=ed.s1){ed.ph=ed.s0;ed.acc=0}
@@ -349,7 +399,7 @@ function renderRev(now){
     while(ed.ph<ed.s1&&fr[ed.ph+1].t-fr[ed.ph].t<=ed.acc){ed.acc-=fr[ed.ph+1].t-fr[ed.ph].t;ed.ph++}
     if(ed.ph>=ed.s1){ed.ph=ed.s0;ed.acc=0}
   }
-  setPose(fr[ed.ph].p); three.controls.update(); three.r.render(three.scene,three.cam); drawTl();
+  setPose(ed.disp[ed.ph]); three.controls.update(); three.r.render(three.scene,three.cam); drawTl();
 }
 function drawTl(){
   const c=$('tl'),W=c.clientWidth,H=c.clientHeight,d=devicePixelRatio||1;
@@ -383,93 +433,109 @@ $('setE').onclick=()=>{ed.s1=Math.max(ed.ph,ed.s0+5)};
 $('redo').onclick=startRecord;
 $('revCancel').onclick=()=>{ed=null;go('home')};
 
+function resample(arr){
+  const out=[],L=arr.length;
+  for(let i=0;i<N;i++){const p=i*(L-1)/(N-1),a=Math.floor(p),b=Math.min(L-1,a+1),f=p-a;out.push(arr[a].map((x,k)=>x+(arr[b][k]-x)*f))}
+  return out;
+}
+// mirror a pose: swap left/right landmarks and flip x, so a left-arm curl becomes a right-arm curl
+const SWAP={2:5,5:2,7:8,8:7}; for(let i=11;i<=32;i+=2){SWAP[i]=i+1;SWAP[i+1]=i}
+const mirror=p=>K.map(i=>{const q=p[KI[SWAP[i]??i]];return [-q[0],q[1],q[2]]});
+function side(tpl){const sd=stdv(tpl),w=normW(sd);return {tpl,w,s:sd.reduce((a,x,k)=>a+x*w[k],0)||1e-3}}
 function buildTemplate(frames,s0,s1){
-  const seg=frames.slice(s0,s1+1).map(fr=>({t:fr.t,v:features(fr.p)}));
-  const T=seg.at(-1).t-seg[0].t; if(seg.length<6||T<300) return null;
-  const tpl=resample(seg), w=normW(stdv(tpl));
-  return {tpl,T,w,s:spread(tpl,w)};
+  const seg=frames.slice(s0,s1+1), T=seg.at(-1).t-seg[0].t; if(seg.length<6||T<300) return null;
+  const A=side(resample(seg.map(fr=>features(fr.p)))), B=side(resample(seg.map(fr=>features(mirror(fr.p)))));
+  // one-sided if the mirrored rep differs clearly from the original
+  const asym=avg(A.tpl.map((r,i)=>wd(r,B.tpl[i],A.w)))/A.s;
+  const oneSided=asym>0.8;
+  return {T,sides:oneSided?[A,B]:[A],oneSided};
 }
 $('save').onclick=()=>{
   const tp=buildTemplate(ed.frames,ed.s0,ed.s1);
   if(!tp){$('rhint').textContent='The selection is too short. Make it cover one full rep.';return}
-  const m={...tp,id:ed.id||Date.now(),name:$('nm').value.trim()||'Movement '+(mvs.length+1),frames:ed.frames,s0:ed.s0,s1:ed.s1};
+  // keep the trimmed rep plus ~1.5 s either side so it can be re-edited
+  const a=Math.max(0,ed.s0-45), b=Math.min(ed.n-1,ed.s1+45), t0=ed.frames[a].t;
+  const m={...tp,v:3,id:ed.id||Date.now(),name:$('nm').value.trim()||'Movement '+(mvs.length+1),sm:+$('smooth').value,
+    frames:ed.frames.slice(a,b+1).map(f=>({t:f.t-t0,p:f.p})),s0:ed.s0-a,s1:ed.s1-a};
   const i=mvs.findIndex(x=>x.id===m.id); i>=0?mvs[i]=m:mvs.push(m);
-  if(!save('rr2_mv',mvs)){ // storage full: keep only the trimmed rep
-    m.frames=ed.frames.slice(ed.s0,ed.s1+1); m.s0=0; m.s1=m.frames.length-1; save('rr2_mv',mvs);
-  }
+  if(!save('rr3_mv',mvs)){m.frames=m.frames.slice(m.s0,m.s1+1).map(f=>({t:f.t-m.frames[m.s0].t,p:f.p}));m.s1-=m.s0;m.s0=0;
+    if(!save('rr3_mv',mvs)){$('rhint').textContent='Phone storage is full. Delete a movement first.';mvs=load('rr3_mv',[]);return}}
   ed=null; go('home');
 };
 
-// ---------- matching ----------
-function resample(arr){
-  const out=[],L=arr.length;
-  for(let i=0;i<N;i++){const p=i*(L-1)/(N-1),a=Math.floor(p),b=Math.min(L-1,a+1),f=p-a;out.push(arr[a].v.map((x,k)=>x+(arr[b].v[k]-x)*f))}
-  const m=out[0].map((_,k)=>avg(out.map(r=>r[k])));
-  return out.map(r=>r.map((x,k)=>x-m[k]));
-}
-const spread=(seq,w)=>stdv(seq).reduce((a,x,k)=>a+x*w[k],0)||1e-3;
-function dtw(A,B,w){
-  const D=Array.from({length:N+1},()=>new Float64Array(N+1).fill(Infinity));D[0][0]=0;
-  for(let i=1;i<=N;i++)for(let j=Math.max(1,i-BAND);j<=Math.min(N,i+BAND);j++){
-    let c=0;for(let k=0;k<w.length;k++){const d=A[i-1][k]-B[j-1][k];c+=w[k]*d*d}
-    D[i][j]=Math.sqrt(c)+Math.min(D[i-1][j],D[i][j-1],D[i-1][j-1]);
-  }
-  return D[N][N]/(2*N);
-}
-
-// ---------- 3 · COUNT ----------
+// ---------- 3 · COUNT: streaming subsequence DTW gives rep progress + completion ----------
 async function startCount(id){
   const m=mvs.find(x=>x.id===id); if(!m) return;
-  cs={m,phase:'ready',buf:[],reps:0,lastRep:0}; $('count').textContent=0; $('cntName').textContent=m.name;
-  $('cntGo').textContent='Start'; $('cntGo').className=''; go('cnt');
+  cs={m,phase:'ready',reps:0,lastRep:0,prog:0}; resetDTW(); setRing(0);
+  $('count').textContent=0; $('cntName').textContent=m.name; $('cntGo').textContent='Start'; $('cntGo').className=''; go('cnt');
   if(await ensureCam()) msg('Tap Start, then get into position');
 }
+function resetDTW(){cs.tr=cs.m.sides.map(sd=>({...sd,D:new Float64Array(N).fill(Infinity),L:new Float64Array(N).fill(1),S:new Float64Array(N)}))}
+// one step of open-begin DTW for one side; returns progress (0..1) and whether a full rep just matched
+function stepSide(tr,s,thr,Tm){
+  const T=tr.tpl,n=T.length,Dp=tr.D,Lp=tr.L,Sp=tr.S, D=new Float64Array(n), L=new Float64Array(n), S=new Float64Array(n), V=new Uint8Array(n);
+  for(let j=0;j<n;j++){
+    const c=wd(s.v,T[j],tr.w);
+    if(j===0){D[0]=c;L[0]=1;S[0]=s.t;continue}             // a rep may start at any frame
+    let bd=Infinity,bl=1,bs=0,bv=0;
+    // diagonal, stay (person slower than template), skip (person up to 2x faster; never twice in a row)
+    const cand=[[Dp[j-1],Lp[j-1],Sp[j-1],0],[Dp[j],Lp[j],Sp[j],0]]; if(!V[j-1]) cand.push([D[j-1],L[j-1],S[j-1],1]);
+    for(const [d,l,st,v] of cand) if((d+c)/(l+1)<(bd+c)/(bl+1)){bd=d;bl=l;bs=st;bv=v}
+    D[j]=bd+c; L[j]=bl+1; S[j]=bs; V[j]=bv;
+  }
+  tr.D=D; tr.L=L; tr.S=S;
+  const score=j=>D[j]/L[j]/tr.s, dur=j=>s.t-S[j];
+  let prog=0;
+  for(let j=n-1;j>0;j--) if(score(j)<thr*1.6&&dur(j)>Tm*0.35*(j/(n-1))&&dur(j)<Tm*3){prog=j/(n-1);break}
+  return {prog,done:score(n-1)<thr&&dur(n-1)>Tm*0.45&&dur(n-1)<Tm*3};
+}
+function setRing(p,done){$('ringFg').setAttribute('stroke-dashoffset',RING*(1-Math.max(0,Math.min(1,p))));$('ring').classList.toggle('done',!!done)}
 function cntFrame(s){
   if(!cs) return;
-  if(!s&&cs.phase==='run') msg('Can’t see you. Step into frame');
-  if(cs.phase!=='run'||!s) return;
-  msg('Counting: '+cs.m.name);
-  cs.buf.push(s); const keep=s.t-(cs.m.T*2.2+500); while(cs.buf.length&&cs.buf[0].t<keep) cs.buf.shift();
-}
-function tick(){
-  if(!cs||cs.phase!=='run'||screen!=='cnt') return;
-  const m=cs.m, now=performance.now(), thr=+$('sens').value; let best=Infinity;
-  if(cs.buf.length>8&&now-cs.lastRep>m.T*0.6){
-    for(const f of[0.7,0.85,1,1.2,1.45]){
-      const win=cs.buf.filter(s=>s.t>=now-m.T*f); if(win.length<8) continue;
-      const Wn=resample(win); if(spread(Wn,m.w)<m.s*0.4) continue;
-      best=Math.min(best,dtw(Wn,m.tpl,m.w)/m.s);
-    }
-    if(best<thr){cs.reps++;cs.lastRep=now;cs.buf=[];bump()}
+  if(cs.phase!=='run') return;
+  if(!s){msg('Can’t see you. Step into frame');return}
+  msg('Counting: '+cs.m.name+(cs.sideTxt||''));
+  const m=cs.m, thr=+$('sens').value;
+  const res=cs.tr.map(tr=>stepSide(tr,s,thr,m.T));
+  const prog=Math.max(...res.map(r=>r.prog));
+  cs.prog+=(prog-cs.prog)*0.45;
+  const hit=res.findIndex(r=>r.done);
+  if(hit>=0&&s.t-cs.lastRep>m.T*0.4){
+    cs.reps++; cs.lastRep=s.t; resetDTW(); cs.prog=0; repDone();
+    if(m.oneSided) cs.sideTxt=hit?' · last rep: other side':' · last rep: recorded side';
+    return;
   }
-  const sc=isFinite(best)?Math.min(best,1):1;
-  $('bar').style.width=Math.max(2,(1-sc)*100)+'%';
-  $('scoreTxt').textContent=isFinite(best)?Math.round((1-sc)*100)+'%':'–';
-  setTimeout(tick,70);
+  if(s.t-cs.lastRep>250) setRing(cs.prog);
 }
-function bump(){const c=$('count');c.textContent=cs.reps;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop');$('speak').checked?say(cs.reps):beep(880)}
+function repDone(){
+  setRing(1,true); setTimeout(()=>{if(cs)setRing(cs.prog)},450);
+  const c=$('count');c.textContent=cs.reps;
+  for(const el of[c,$('plus'),$('camStage')]){const k=el===c?'pop':el.id==='plus'?'show':'flash';el.classList.remove(k);void el.offsetWidth;el.classList.add(k)}
+  beep(1320,.12); if($('speak').checked) setTimeout(()=>say(cs.reps),120);
+  try{navigator.vibrate&&navigator.vibrate(80)}catch(e){}
+}
 $('cntGo').onclick=()=>{
   if(!cs) return;
   if(cs.phase==='ready'){
     cs.phase='cd'; $('cntGo').textContent='Stop & log'; $('cntGo').className='red';
     let left=5; $('big').textContent=left; beep(660); msg('Get into position…');
-    cdTimer=setInterval(()=>{left--; if(left>0){$('big').textContent=left;beep(660)} else {clearInterval(cdTimer);cdTimer=null;$('big').textContent='';beep(1200);say('Go');cs.phase='run';cs.buf=[];cs.lastRep=performance.now();tick()}},1000);
+    cdTimer=setInterval(()=>{left--; if(left>0){$('big').textContent=left;beep(660)} else {clearInterval(cdTimer);cdTimer=null;$('big').textContent='';beep(1200);say('Go');cs.phase='run';cs.lastRep=performance.now();resetDTW()}},1000);
   }else stopCount();
 };
 function stopCount(){
   if(cdTimer){clearInterval(cdTimer);cdTimer=null} $('big').textContent='';
-  if(cs.reps){logs.unshift({n:cs.m.name,r:cs.reps,d:new Date().toISOString()});logs=logs.slice(0,100);save('rr2_log',logs)}
+  if(cs.reps){logs.unshift({n:cs.m.name,r:cs.reps,d:new Date().toISOString()});logs=logs.slice(0,100);save('rr3_log',logs)}
   msg(cs.reps?`Logged ${cs.reps} reps`:'Stopped');
-  cs.phase='ready'; cs.reps=0; $('count').textContent=0; $('cntGo').textContent='Start'; $('cntGo').className='';
+  cs.phase='ready'; cs.reps=0; cs.prog=0; setRing(0); $('count').textContent=0; $('cntGo').textContent='Start'; $('cntGo').className='';
 }
-$('cntReset').onclick=()=>{if(!cs)return;cs.reps=0;cs.buf=[];$('count').textContent=0};
+$('cntReset').onclick=()=>{if(!cs)return;cs.reps=0;cs.prog=0;resetDTW();setRing(0);$('count').textContent=0};
 $('cntBack').onclick=()=>{if(cs&&cs.phase!=='ready')stopCount();cs=null;go('home')};
-const setThr=()=>{const v=+$('sens').value;$('thr').style.left=(1-v)*100+'%';$('sensTxt').textContent=v<0.3?'strict':v>0.6?'loose':'normal'};
+const setThr=()=>{const v=+$('sens').value;$('sensTxt').textContent=v<0.3?'strict':v>0.6?'loose':'normal'};
 $('sens').oninput=setThr; setThr();
 
 // ---------- home ----------
 function renderHome(){
-  $('mvList').innerHTML=mvs.length?mvs.map(m=>`<div class="mv"><div class="nm">${esc(m.name)}<small>${(m.T/1000).toFixed(1)} s per rep</small></div>
+  $('mvList').innerHTML=mvs.length?mvs.map(m=>`<div class="mv"><div class="nm">${esc(m.name)}<small>${(m.T/1000).toFixed(1)} s per rep${m.oneSided?' · one-sided, counts both sides':''}</small></div>
     <button data-a="cnt" data-id="${+m.id}">Count</button><button class="sec" data-a="edit" data-id="${+m.id}">Edit</button><button class="sec" data-a="del" data-id="${+m.id}">Delete</button></div>`).join('')
     :'<p class="empty">No movements yet. Record your first one.</p>';
   $('log').innerHTML=logs.length?logs.map(l=>`<li><span>${esc(l.n)} · <b>${+l.r}</b> reps</span><span>${esc(new Date(l.d).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))}</span></li>`).join(''):'<li><span>No sets logged yet</span><span></span></li>';
@@ -477,10 +543,9 @@ function renderHome(){
 $('mvList').onclick=ev=>{
   const b=ev.target.closest('button'); if(!b) return; const id=+b.dataset.id, m=mvs.find(x=>x.id===id); if(!m) return;
   if(b.dataset.a==='cnt') startCount(id);
-  else if(b.dataset.a==='edit'){ if(!m.frames){alertMsg(b);return} openEditor(m); }
-  else if(b.dataset.a==='del'){ if(b.dataset.sure){mvs=mvs.filter(x=>x.id!==id);save('rr2_mv',mvs);renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
+  else if(b.dataset.a==='edit') openEditor(m);
+  else if(b.dataset.a==='del'){ if(b.dataset.sure){mvs=mvs.filter(x=>x.id!==id);save('rr3_mv',mvs);renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
 };
-function alertMsg(b){b.textContent='No recording';b.disabled=true}
 go('home');
 }
 </script>
