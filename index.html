@@ -5,157 +5,409 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Rep Recorder</title>
 <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;800&family=Red+Hat+Text:wght@400;600&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <style>
-:root{--bg:#0b1433;--card:#141f47;--ink:#eef1ff;--dim:#9aa6d6;--acc:#f7e463;--hot:#e8452c;--ok:#4fc1c6}
+:root{--bg:#0b1433;--card:#141f47;--ink:#eef1ff;--dim:#9aa6d6;--acc:#f7e463;--hot:#e8452c;--ok:#4fc1c6;--line:#26336a}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Red Hat Text",system-ui,sans-serif;padding:max(12px,env(safe-area-inset-top)) 12px max(30px,env(safe-area-inset-bottom))}
 main{max-width:560px;margin:auto}
-h1{font:800 28px/1.05 "Red Hat Display",sans-serif;margin:6px 0 10px}
-h2{font:800 18px "Red Hat Display",sans-serif;margin:0 0 10px}
+h1{font:800 26px/1.05 "Red Hat Display",sans-serif;margin:4px 0 10px}
+h2{font:800 18px "Red Hat Display",sans-serif;margin:0 0 8px}
+.steps{display:flex;gap:6px;margin-bottom:12px}
+.steps span{flex:1;text-align:center;font-size:13px;font-weight:600;padding:6px 4px;border-radius:999px;background:var(--card);color:var(--dim)}
+.steps span.on{background:var(--acc);color:var(--bg)}
 .stage{position:relative;background:#000;border-radius:18px;overflow:hidden;aspect-ratio:3/4;margin-bottom:12px}
-.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 video{display:none}
 #count{position:absolute;right:14px;top:6px;font:800 clamp(72px,24vw,120px)/1 "Red Hat Display",sans-serif;color:var(--acc);text-shadow:0 3px 18px #0009}
 #count.pop{animation:pop .25s}@keyframes pop{50%{transform:scale(1.15)}}
 @media(prefers-reduced-motion:reduce){#count.pop{animation:none}}
-#big{position:absolute;inset:0;display:grid;place-items:center;font:800 26vw/1 "Red Hat Display",sans-serif;color:#fff;text-shadow:0 4px 24px #000;pointer-events:none}
-#msg{position:absolute;left:12px;bottom:10px;right:12px;font-weight:600;text-shadow:0 1px 6px #000}
-#startCam{position:absolute;inset:0;margin:auto;width:max-content;height:52px}
+#big{position:absolute;inset:0;display:grid;place-items:center;font:800 clamp(90px,30vw,180px)/1 "Red Hat Display",sans-serif;color:#fff;text-shadow:0 4px 24px #000;pointer-events:none}
+#msg{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;font-weight:600;background:linear-gradient(transparent,#000a);font-size:17px}
+#recDot{position:absolute;left:14px;top:14px;display:none;align-items:center;gap:6px;font-weight:600;background:#000a;padding:4px 10px;border-radius:999px}
+#recDot::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--hot)}
 .card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px}
-button{font:600 16px "Red Hat Text",sans-serif;min-height:48px;padding:0 18px;border-radius:12px;border:0;background:var(--acc);color:#0b1433;cursor:pointer}
-button.sec{background:#26336a;color:var(--ink)}button.red{background:var(--hot);color:#fff}
+button{font:600 16px "Red Hat Text",sans-serif;min-height:48px;padding:0 16px;border-radius:12px;border:0;background:var(--acc);color:var(--bg);cursor:pointer;white-space:nowrap}
+button.sec{background:var(--line);color:var(--ink)}button.red{background:var(--hot);color:#fff}
 button:disabled{opacity:.4}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
-input,select{font:16px "Red Hat Text",sans-serif;min-height:48px;padding:0 12px;border-radius:12px;border:1px solid #33407a;background:#0e1838;color:var(--ink);width:100%}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 auto}.row>.n{flex:0 0 auto}
-.meter{height:12px;background:#0e1838;border-radius:6px;position:relative;overflow:hidden;margin-top:12px}
+input{font:16px "Red Hat Text",sans-serif;min-height:48px;padding:0 12px;border-radius:12px;border:1px solid #33407a;background:#0e1838;color:var(--ink);width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 auto}.row>.n{flex:0 0 auto}
+.hint{color:var(--dim);font-size:14px;margin:8px 0 0}
+ol.tips{margin:0;padding-left:20px;color:var(--dim);font-size:15px}ol.tips li{margin:3px 0}
+.meter{height:12px;background:#0e1838;border-radius:6px;position:relative;overflow:hidden;margin-top:4px}
 .meter i{position:absolute;inset:0 auto 0 0;background:var(--ok);transition:width .08s}
 .meter b{position:absolute;top:0;bottom:0;width:2px;background:var(--hot)}
 .lbl{display:flex;justify-content:space-between;color:var(--dim);font-size:13px;margin:6px 0 4px}
-.hint{color:var(--dim);font-size:14px;margin:8px 0 0}
 input[type=range]{min-height:32px;padding:0;border:0;background:none}
-label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:14px}label.ck input{width:20px;min-height:20px}
-ul{list-style:none;padding:0;margin:0}li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #26336a;font-size:15px}
-li span:last-child{color:var(--dim);white-space:nowrap}
+label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:14px;margin-top:10px}label.ck input{width:20px;min-height:20px}
+#tl{width:100%;height:76px;display:block;background:#0e1838;border-radius:12px;touch-action:none;cursor:pointer;margin-top:4px}
+.times{display:flex;justify-content:space-between;font-size:14px;color:var(--dim);margin:6px 0 10px;font-variant-numeric:tabular-nums}
+.times b{color:var(--ink)}
+.mv{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.mv .nm{flex:1 1 140px;font-weight:600}.mv .nm small{display:block;color:var(--dim);font-weight:400}
+.mv button{min-height:40px;padding:0 12px;font-size:15px}
+ul{list-style:none;padding:0;margin:0}ul li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+ul li span:last-child{color:var(--dim);white-space:nowrap}
+.empty{color:var(--dim);font-size:15px;padding:6px 0}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
 <main>
 <h1>Rep Recorder</h1>
+<div class="steps"><span data-s="rec">1 · Record</span><span data-s="rev">2 · Review</span><span data-s="cnt">3 · Count</span></div>
 
-<div class="stage">
+<div class="stage" id="camStage" hidden>
   <video id="vid" playsinline muted></video>
   <canvas id="cv"></canvas>
-  <div id="count">0</div>
+  <div id="recDot">REC</div>
+  <div id="count" hidden>0</div>
   <div id="big"></div>
   <div id="msg"></div>
-  <button id="startCam">Start camera</button>
 </div>
 
-<section class="card">
-<h2>Teach a movement</h2>
-<div class="row"><input id="name" placeholder="Name, e.g. Goblet squat" maxlength="40"><button class="n" id="rec" disabled>Record</button></div>
-<p class="hint">Prop the phone so your whole body is in view. After a 5 s countdown, do one rep and then hold still. Recording stops on its own.</p>
+<div class="stage" id="revStage" hidden><canvas id="c3"></canvas></div>
+
+<!-- HOME -->
+<section data-screen="home">
+  <div class="card">
+    <h2>Your movements</h2>
+    <div id="mvList"></div>
+    <button id="newMv" style="width:100%;margin-top:12px">+ Record a new movement</button>
+  </div>
+  <div class="card"><h2>Log</h2><ul id="log"></ul></div>
 </section>
 
-<section class="card">
-<h2>Count reps</h2>
-<div class="row"><select id="mv"></select><button class="sec n" id="del">Delete</button></div>
-<div class="meter"><i id="bar"></i><b id="thr"></b></div>
-<div class="lbl"><span>Match with saved rep</span><span id="scoreTxt">–</span></div>
-<div class="lbl"><span>Sensitivity</span><span id="sensTxt"></span></div>
-<input type="range" id="sens" min="0.15" max="0.9" step="0.025" value="0.4">
-<div class="row" style="margin-top:10px"><button id="cnt" disabled>Start counting</button><button class="sec n" id="reset">Reset</button><button class="sec n" id="flip">Flip camera</button></div>
-<label class="ck" style="margin-top:10px"><input type="checkbox" id="speak" checked> Say the count out loud</label>
+<!-- 1 RECORD -->
+<section data-screen="rec" hidden>
+  <div class="card">
+    <ol class="tips">
+      <li>Prop the phone up and step back.</li>
+      <li><b>Stand in a T-pose</b> with your whole body in frame. The 5-second countdown starts on its own.</li>
+      <li>Get into position and do <b>2–3 reps</b>.</li>
+      <li>Hold still for 2 seconds. Recording stops on its own.</li>
+    </ol>
+    <div class="row" style="margin-top:12px"><button class="sec" id="recCancel">Cancel</button><button class="red n" id="recStop" hidden>Stop</button><button class="sec n" id="flip1">Flip camera</button></div>
+  </div>
 </section>
 
-<section class="card">
-<h2>Log</h2>
-<ul id="log"></ul>
+<!-- 2 REVIEW -->
+<section data-screen="rev" hidden>
+  <div class="card">
+    <h2>Trim to exactly one rep</h2>
+    <p class="hint" id="rhint" style="margin:0 0 6px"></p>
+    <canvas id="tl"></canvas>
+    <div class="times"><span>Start <b id="tS">0.0</b> s</span><span>Rep <b id="tL">0.0</b> s</span><span>End <b id="tE">0.0</b> s</span></div>
+    <div class="row">
+      <button class="sec n" id="stepB" aria-label="Previous frame">‹</button>
+      <button id="play">Pause</button>
+      <button class="sec n" id="stepF" aria-label="Next frame">›</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="sec" id="setS">Start here</button>
+      <button class="sec" id="setE">End here</button>
+      <button class="sec" id="auto">Auto-find</button>
+    </div>
+    <p class="hint">Drag the yellow handles, or move the white playhead and tap Start/End here. Drag the 3D figure to rotate it.</p>
+  </div>
+  <div class="card">
+    <div class="row"><input id="nm" placeholder="Name, e.g. Push-up" maxlength="40"></div>
+    <div class="row" style="margin-top:10px"><button id="save">Save movement</button><button class="sec n" id="redo">Re-record</button><button class="sec n" id="revCancel">Cancel</button></div>
+  </div>
+</section>
+
+<!-- 3 COUNT -->
+<section data-screen="cnt" hidden>
+  <div class="card">
+    <h2 id="cntName"></h2>
+    <div class="lbl"><span>Match with saved rep</span><span id="scoreTxt">–</span></div>
+    <div class="meter"><i id="bar"></i><b id="thr"></b></div>
+    <div class="lbl" style="margin-top:12px"><span>Sensitivity</span><span id="sensTxt"></span></div>
+    <input type="range" id="sens" min="0.15" max="0.9" step="0.025" value="0.4" aria-label="Sensitivity">
+    <div class="row" style="margin-top:10px"><button id="cntGo">Start</button><button class="sec n" id="cntReset">Reset</button><button class="sec n" id="flip2">Flip</button><button class="sec n" id="cntBack">Done</button></div>
+    <label class="ck"><input type="checkbox" id="speak" checked> Say the count out loud</label>
+  </div>
 </section>
 </main>
 
 <script type="module">
 import {FilesetResolver, PoseLandmarker} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
 {
 const $=id=>document.getElementById(id);
-const N=32, BAND=6;
-const MODEL="https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const N=32, BAND=6, PAD=14;
+const K=[0,11,12,13,14,15,16,23,24,25,26,27,28], KI={}; K.forEach((v,i)=>KI[v]=i);
+const BODY=K.slice(1);
 const BONES=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
 const ANG=[[11,13,15],[12,14,16],[23,11,13],[24,12,14],[11,23,25],[12,24,26],[23,25,27],[24,26,28]];
-let pose=null, stream=null, facing='user', mode='idle', feat=null, lastLm=null;
-let recBuf=[], recState=null, buf=[], reps=0, lastRep=0, ac=null, wl=null, cdEnd=0, noise=[];
+const MODEL="https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const WASM="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+
+let pose=null, stream=null, facing='user', screen='home', sp=null, ac=null, wake=null;
+let rs=null, ed=null, cs=null, three=null, cdTimer=null;
 const vid=$('vid'), cv=$('cv'), ctx=cv.getContext('2d');
 
+// ---------- storage ----------
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
-const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-let mvs=load('rrc_mv',[]), logs=load('rrc_log',[]);
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}};
+let mvs=load('rr2_mv',[]), logs=load('rr2_log',[]);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const msg=t=>$('msg').textContent=t;
-const cur=()=>mvs[$('mv').selectedIndex];
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 
-// ---------- camera + model ----------
-async function startCam(){
-  $('startCam').disabled=true; msg('Loading pose model…');
+// ---------- screens ----------
+function go(s){
+  screen=s;
+  document.querySelectorAll('[data-screen]').forEach(el=>el.hidden=el.dataset.screen!==s);
+  document.querySelectorAll('.steps span').forEach(el=>el.classList.toggle('on',el.dataset.s===s));
+  $('camStage').hidden=!(s==='rec'||s==='cnt'); $('revStage').hidden=s!=='rev';
+  $('count').hidden=s!=='cnt'; $('recDot').style.display='none'; $('big').textContent='';
+  if(cdTimer){clearInterval(cdTimer);cdTimer=null}
+  if(s==='rec'||s==='cnt'){try{navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{})}catch(e){}}
+  else{try{wake&&wake.release()}catch(e){} wake=null}
+  if(s==='home') renderHome();
+  scrollTo(0,0);
+}
+
+// ---------- camera ----------
+async function ensureCam(){
+  ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  if(stream) return true;
+  msg('Loading pose model…');
   try{
-    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
     if(!pose){
-      const fs=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+      const fs=await FilesetResolver.forVisionTasks(WASM);
       pose=await PoseLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:MODEL,delegate:"GPU"},runningMode:"VIDEO",numPoses:1});
     }
-    if(stream) stream.getTracks().forEach(t=>t.stop());
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:720},height:{ideal:960}},audio:false});
-    vid.srcObject=stream; await vid.play();
-    $('startCam').style.display='none'; $('rec').disabled=false; $('cnt').disabled=!mvs.length;
-    msg('Step back until your whole body is visible');
-    requestAnimationFrame(loop);
-  }catch(err){msg('Camera/model failed: '+err.message+' (needs HTTPS and camera permission)'); $('startCam').disabled=false}
+    vid.srcObject=stream; await vid.play(); return true;
+  }catch(err){msg('Camera or model failed: '+err.message);return false}
 }
-$('startCam').onclick=startCam;
-$('flip').onclick=()=>{facing=facing==='user'?'environment':'user'; if(stream) startCam()};
+async function flip(){facing=facing==='user'?'environment':'user'; if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} await ensureCam()}
+$('flip1').onclick=flip; $('flip2').onclick=flip;
 
-// ---------- features: joint angles + wrist heights, scale-free ----------
-function features(lm,ar){
-  const P=i=>({x:lm[i].x*ar,y:lm[i].y});
-  const ang=([a,b,c])=>{const A=P(a),B=P(b),C=P(c);const v1x=A.x-B.x,v1y=A.y-B.y,v2x=C.x-B.x,v2y=C.y-B.y;
-    return Math.acos(Math.max(-1,Math.min(1,(v1x*v2x+v1y*v2y)/(Math.hypot(v1x,v1y)*Math.hypot(v2x,v2y)||1))))};
-  const sh=(lm[11].y+lm[12].y)/2, hp=(lm[23].y+lm[24].y)/2, torso=Math.abs(hp-sh)||0.2;
-  return [...ANG.map(ang),(sh-lm[15].y)/torso,(sh-lm[16].y)/torso];
+// ---------- features (3D world landmarks: joint angles, wrist height, torso tilt) ----------
+function features(p){
+  const P=i=>p[KI[i]];
+  const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], len=v=>Math.hypot(v[0],v[1],v[2])||1e-6;
+  const ang=([a,b,c])=>{const u=sub(P(a),P(b)),v=sub(P(c),P(b));return Math.acos(Math.max(-1,Math.min(1,(u[0]*v[0]+u[1]*v[1]+u[2]*v[2])/(len(u)*len(v)))))};
+  const mid=(a,b)=>[(P(a)[0]+P(b)[0])/2,(P(a)[1]+P(b)[1])/2,(P(a)[2]+P(b)[2])/2];
+  const sh=mid(11,12), hp=mid(23,24), t=len(sub(hp,sh));
+  return [...ANG.map(ang),(sh[1]-P(15)[1])/t,(sh[1]-P(16)[1])/t,Math.acos(Math.min(1,Math.abs(hp[1]-sh[1])/t))];
 }
 
+// ---------- main loop ----------
 let lastTs=-1;
-function loop(){
-  if(!stream) return;
-  const W=vid.videoWidth, H=vid.videoHeight;
-  if(W&&cv.width!==W){cv.width=W;cv.height=H}
+function loop(now){
+  requestAnimationFrame(loop);
+  if(screen==='rev'){renderRev(now);return}
+  if(!(screen==='rec'||screen==='cnt')||!stream||!vid.videoWidth||!pose) return;
+  const W=vid.videoWidth,H=vid.videoHeight; if(cv.width!==W){cv.width=W;cv.height=H}
   ctx.save(); if(facing==='user'){ctx.translate(W,0);ctx.scale(-1,1)}
   ctx.drawImage(vid,0,0,W,H);
-  const ts=performance.now();
-  if(pose&&ts>lastTs){
-    lastTs=ts;
-    const r=pose.detectForVideo(vid,ts); const lm=r.landmarks&&r.landmarks[0];
-    if(lm){
-      const vis=[11,12,23,24].every(i=>(lm[i].visibility??1)>0.5);
-      ctx.lineWidth=Math.max(3,W/160); ctx.strokeStyle=vis?'#4fc1c6':'#e8452c';
-      for(const[a,b]of BONES){ctx.beginPath();ctx.moveTo(lm[a].x*W,lm[a].y*H);ctx.lineTo(lm[b].x*W,lm[b].y*H);ctx.stroke()}
-      ctx.fillStyle='#f7e463'; for(const i of[11,12,13,14,15,16,23,24,25,26,27,28]){ctx.beginPath();ctx.arc(lm[i].x*W,lm[i].y*H,W/110,0,7);ctx.fill()}
-      if(vis){const f=features(lm,W/H); feat=feat?feat.map((x,i)=>x+0.5*(f[i]-x)):f; onFrame({t:ts,v:feat.slice()})}
-      else if(mode==='idle') msg('Shoulders and hips must be in view');
-    }else if(mode==='idle') msg('No person found');
+  const ts=performance.now(); if(ts<=lastTs){ctx.restore();return} lastTs=ts;
+  const r=pose.detectForVideo(vid,ts), lm=r.landmarks?.[0], w3=r.worldLandmarks?.[0];
+  let s=null, full=false;
+  if(lm&&w3){
+    full=BODY.every(i=>(lm[i].visibility??1)>0.6&&lm[i].x>0.01&&lm[i].x<0.99&&lm[i].y>0.01&&lm[i].y<0.99);
+    ctx.lineWidth=Math.max(3,W/150); ctx.strokeStyle=full?'#4fc1c6':'#e8452c';
+    for(const[a,b]of BONES){ctx.beginPath();ctx.moveTo(lm[a].x*W,lm[a].y*H);ctx.lineTo(lm[b].x*W,lm[b].y*H);ctx.stroke()}
+    ctx.fillStyle='#f7e463'; for(const i of BODY){ctx.beginPath();ctx.arc(lm[i].x*W,lm[i].y*H,W/110,0,7);ctx.fill()}
+    const p=K.map(i=>[w3[i].x,w3[i].y,w3[i].z]);
+    sp=sp?sp.map((q,j)=>q.map((x,k)=>x+0.55*(p[j][k]-x))):p;
+    s={t:ts,p:sp.map(q=>q.map(x=>Math.round(x*1000)/1000))}; s.v=features(s.p);
   }
   ctx.restore();
-  requestAnimationFrame(loop);
+  if(screen==='rec') recFrame(s,full); else cntFrame(s);
+}
+requestAnimationFrame(loop);
+
+// ---------- sound ----------
+function beep(f){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.15;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.1)}catch(e){}}
+function say(t){try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(String(t)))}catch(e){}}
+const energy=(a,b)=>a.reduce((s,x,k)=>s+Math.abs(x-b[k]),0);
+
+// ---------- 1 · RECORD ----------
+async function startRecord(){
+  go('rec'); rs=null; $('recStop').hidden=true;
+  if(!await ensureCam()) return;
+  rs={phase:'aim',okSince:0}; msg('Stand in a T-pose with your whole body in frame');
+}
+$('newMv').onclick=startRecord;
+$('recCancel').onclick=()=>{rs=null;go('home')};
+$('recStop').onclick=()=>{if(rs&&rs.phase==='rec')finishRec()};
+
+function recFrame(s,full){
+  if(!rs) return; const now=performance.now();
+  if(rs.phase==='aim'){
+    if(full){rs.okSince=rs.okSince||now; msg('Got you, hold that…'); if(now-rs.okSince>1000){Object.assign(rs,{phase:'cd',cdEnd:now+5000,noise:[],lost:0,sec:6})}}
+    else{rs.okSince=0; msg(s?'Step back: all joints must be in frame':'Stand in a T-pose with your whole body in frame')}
+  }else if(rs.phase==='cd'){
+    if(!full){rs.lost=rs.lost||now; if(now-rs.lost>700){Object.assign(rs,{phase:'aim',okSince:0});$('big').textContent='';msg('Lost you. Step back into frame');return}} else rs.lost=0;
+    if(s&&rs.prev) rs.noise.push(energy(s.v,rs.prev.v));
+    const left=Math.ceil((rs.cdEnd-now)/1000);
+    if(left!==rs.sec&&left>0){rs.sec=left;$('big').textContent=left;beep(660)}
+    msg('Get ready…');
+    if(now>=rs.cdEnd){
+      $('big').textContent=''; beep(1200); say('Go');
+      Object.assign(rs,{phase:'rec',frames:[],start:now,moved:false,stillSince:0,th:Math.max(avg(rs.noise)*2.5,0.05)});
+      $('recStop').hidden=false; $('recDot').style.display='flex';
+    }
+  }else if(rs.phase==='rec'){
+    if(s){
+      rs.frames.push(s); const n=rs.frames.length;
+      if(n>1){const e=energy(s.v,rs.frames[n-2].v);
+        if(e>rs.th){if(!rs.moved){rs.moved=true;rs.moveStart=now}rs.stillSince=0}
+        else if(rs.moved){rs.stillSince=rs.stillSince||now; if(now-rs.stillSince>2000&&now-rs.moveStart>1500) return finishRec()}}
+    }
+    msg(`Recording ${((now-rs.start)/1000).toFixed(1)} s. Hold still 2 s when done`);
+    if(now-rs.start>25000) return finishRec();
+  }
+  rs.prev=s;
+}
+function finishRec(){
+  const fr=rs.frames; rs=null; $('recStop').hidden=true; $('recDot').style.display='none'; beep(990);
+  if(fr.length<20){rs={phase:'aim',okSince:0};msg('Too short. Back in T-pose to try again');return}
+  const t0=fr[0].t;
+  openEditor({id:null,name:'',frames:fr.map(f=>({t:Math.round(f.t-t0),p:f.p}))});
 }
 
-// ---------- signal helpers ----------
+// ---------- 2 · REVIEW ----------
+const stdv=seq=>seq[0].map((_,k)=>{const m=avg(seq.map(r=>r[k]));return Math.sqrt(avg(seq.map(r=>(r[k]-m)**2)))});
+const wd=(a,b,w)=>Math.sqrt(a.reduce((s,x,k)=>s+w[k]*(x-b[k])**2,0));
+const normW=sd=>{const tot=sd.reduce((a,b)=>a+b,0)||1;return sd.map(x=>(x/tot)*0.85+0.15/sd.length)};
+
+function openEditor(m){
+  const f=m.frames.map(fr=>features(fr.p)), n=f.length, w=normW(stdv(f));
+  const e=f.map((v,i)=>i?wd(v,f[i-1],w):0);
+  const es=e.map((_,i)=>avg(e.slice(Math.max(0,i-2),i+3)));
+  ed={id:m.id,frames:m.frames,f,n,w,es,s0:0,s1:n-1,ph:0,playing:true,acc:0,last:0};
+  $('nm').value=m.name||'';
+  go('rev'); initThree();
+  let minY=Infinity; for(const fr of m.frames) for(const q of fr.p) minY=Math.min(minY,-q[1]);
+  three.grid.position.y=minY-0.02; three.controls.target.set(0,minY/2,0);
+  if(m.s0!=null){ed.s0=m.s0;ed.s1=m.s1;$('rhint').textContent='Adjust the trim if needed, then save.'}
+  else autoFind();
+  ed.ph=ed.s0;
+}
+function autoFind(){
+  const {f,n,w,es}=ed, mx=Math.max(...es)||1;
+  let a=0,b=n-1; while(a<b&&es[a]<mx*0.2)a++; while(b>a&&es[b]<mx*0.2)b--;
+  let best=null;
+  if(b-a>=30){
+    const ds=[]; for(let L=10;L<=Math.floor((b-a)*0.6);L++){let s=0,c=0;for(let i=a;i+L<=b;i++){s+=wd(f[i],f[i+L],w);c++}ds.push([L,s/c])}
+    if(ds.length>2){
+      const dmin=Math.min(...ds.map(d=>d[1])), dmean=avg(ds.map(d=>d[1]));
+      if(dmin<dmean*0.6) for(let j=1;j<ds.length-1;j++) if(ds[j][1]<=ds[j-1][1]&&ds[j][1]<=ds[j+1][1]&&ds[j][1]<=dmin*1.3){best=ds[j][0];break}
+      if(best){
+        let s0=a,lo=Infinity;
+        for(let i=a;i+best<=Math.min(n-1,b+5);i++){const sc=wd(f[i],f[i+best],w)/dmean+es[i]/mx; if(sc<lo){lo=sc;s0=i}}
+        ed.s0=s0; ed.s1=s0+best;
+      }
+    }
+  }
+  if(best) $('rhint').textContent='Found one rep. Check that it plays as a single clean rep.';
+  else{ed.s0=Math.max(0,a-3);ed.s1=Math.min(n-1,b+3);$('rhint').textContent='Couldn’t find a repeating rep. Drag the handles to cover exactly one.'}
+  ed.ph=ed.s0; ed.acc=0; ed.playing=true;
+}
+$('auto').onclick=autoFind;
+
+function initThree(){
+  if(three) return;
+  const canvas=$('c3');
+  const r=new THREE.WebGLRenderer({canvas,antialias:true}); r.setPixelRatio(Math.min(2,devicePixelRatio));
+  const scene=new THREE.Scene(); scene.background=new THREE.Color('#0b1433');
+  const cam=new THREE.PerspectiveCamera(40,0.75,0.01,50); cam.position.set(1.9,0.5,3.2);
+  const controls=new OrbitControls(cam,canvas); controls.enableDamping=true; controls.enablePan=false;
+  scene.add(new THREE.HemisphereLight(0xdfe6ff,0x1a2350,1.3));
+  const dl=new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(2,4,3); scene.add(dl);
+  const grid=new THREE.GridHelper(4,16,0x4fc1c6,0x26336a); scene.add(grid);
+  const jm=new THREE.MeshStandardMaterial({color:0xf7e463,roughness:.45}), bm=new THREE.MeshStandardMaterial({color:0xeef1ff,roughness:.6});
+  const sph=new THREE.SphereGeometry(1,18,12), cyl=new THREE.CylinderGeometry(1,1,1,12);
+  const joints=K.map(k=>{const m=new THREE.Mesh(sph,k===0?bm:jm);m.scale.setScalar(k===0?0.1:0.04);scene.add(m);return m});
+  const bones=[...BONES,null].map(()=>{const m=new THREE.Mesh(cyl,bm);scene.add(m);return m});
+  three={r,scene,cam,controls,grid,joints,bones,UP:new THREE.Vector3(0,1,0)};
+  const fit=()=>{const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()};
+  new ResizeObserver(fit).observe(canvas); fit();
+}
+function setPose(p){
+  const V=p.map(q=>new THREE.Vector3(q[0],-q[1],-q[2]));
+  three.joints.forEach((m,i)=>m.position.copy(V[i]));
+  const neck=V[KI[11]].clone().add(V[KI[12]]).multiplyScalar(.5);
+  const pairs=[...BONES.map(([a,b])=>[V[KI[a]],V[KI[b]]]),[V[0],neck]];
+  pairs.forEach(([a,b],j)=>{const m=three.bones[j],d=b.clone().sub(a),L=d.length()||1e-3;
+    m.position.copy(a).add(b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(three.UP,d.divideScalar(L)); m.scale.set(.03,L,.03)});
+}
+function renderRev(now){
+  if(!ed||!three) return;
+  const dt=ed.last?Math.min(100,now-ed.last):0; ed.last=now; const fr=ed.frames;
+  if(ed.playing){
+    if(ed.ph<ed.s0||ed.ph>=ed.s1){ed.ph=ed.s0;ed.acc=0}
+    ed.acc+=dt;
+    while(ed.ph<ed.s1&&fr[ed.ph+1].t-fr[ed.ph].t<=ed.acc){ed.acc-=fr[ed.ph+1].t-fr[ed.ph].t;ed.ph++}
+    if(ed.ph>=ed.s1){ed.ph=ed.s0;ed.acc=0}
+  }
+  setPose(fr[ed.ph].p); three.controls.update(); three.r.render(three.scene,three.cam); drawTl();
+}
+function drawTl(){
+  const c=$('tl'),W=c.clientWidth,H=c.clientHeight,d=devicePixelRatio||1;
+  if(c.width!==Math.round(W*d)){c.width=Math.round(W*d);c.height=Math.round(H*d)}
+  const x=c.getContext('2d'); x.setTransform(d,0,0,d,0,0); x.clearRect(0,0,W,H);
+  const {n,es,s0,s1,ph,frames}=ed, X=i=>PAD+i/(n-1)*(W-2*PAD), mx=Math.max(...es)||1;
+  x.fillStyle='rgba(247,228,99,.16)'; x.fillRect(X(s0),0,X(s1)-X(s0),H);
+  x.beginPath(); es.forEach((v,i)=>{const px=X(i),py=H-8-(v/mx)*(H-20);i?x.lineTo(px,py):x.moveTo(px,py)});
+  x.strokeStyle='#4fc1c6'; x.lineWidth=1.5; x.stroke();
+  x.fillStyle='#f7e463'; for(const i of[s0,s1]){x.fillRect(X(i)-1.5,0,3,H);x.beginPath();x.arc(X(i),H/2,10,0,7);x.fill()}
+  x.fillStyle='#fff'; x.fillRect(X(ph)-1,4,2,H-8);
+  const T=i=>(frames[i].t/1000).toFixed(2);
+  $('tS').textContent=T(s0); $('tE').textContent=T(s1); $('tL').textContent=((frames[s1].t-frames[s0].t)/1000).toFixed(2);
+  $('play').textContent=ed.playing?'Pause':'Play rep';
+}
+{ // timeline dragging
+  const tl=$('tl'); let drag=null;
+  const at=ev=>{const r=tl.getBoundingClientRect();return {px:ev.clientX-r.left,i:Math.round(Math.max(0,Math.min(1,(ev.clientX-r.left-PAD)/(r.width-2*PAD)))*(ed.n-1)),X:i=>PAD+i/(ed.n-1)*(r.width-2*PAD)}};
+  const move=ev=>{const {i}=at(ev);
+    if(drag==='s0'){ed.s0=Math.min(i,ed.s1-5);ed.ph=ed.s0} else if(drag==='s1'){ed.s1=Math.max(i,ed.s0+5);ed.ph=ed.s1} else ed.ph=i};
+  tl.onpointerdown=ev=>{if(!ed)return;tl.setPointerCapture(ev.pointerId);const {px,X}=at(ev);
+    const d0=Math.abs(px-X(ed.s0)),d1=Math.abs(px-X(ed.s1));drag=Math.min(d0,d1)<26?(d0<=d1?'s0':'s1'):'ph';ed.playing=false;move(ev)};
+  tl.onpointermove=ev=>{if(drag)move(ev)};
+  tl.onpointerup=tl.onpointercancel=()=>{drag=null};
+}
+$('play').onclick=()=>{ed.playing=!ed.playing;if(ed.playing&&(ed.ph<ed.s0||ed.ph>=ed.s1))ed.ph=ed.s0;ed.acc=0};
+$('stepB').onclick=()=>{ed.playing=false;ed.ph=Math.max(0,ed.ph-1)};
+$('stepF').onclick=()=>{ed.playing=false;ed.ph=Math.min(ed.n-1,ed.ph+1)};
+$('setS').onclick=()=>{ed.s0=Math.min(ed.ph,ed.s1-5)};
+$('setE').onclick=()=>{ed.s1=Math.max(ed.ph,ed.s0+5)};
+$('redo').onclick=startRecord;
+$('revCancel').onclick=()=>{ed=null;go('home')};
+
+function buildTemplate(frames,s0,s1){
+  const seg=frames.slice(s0,s1+1).map(fr=>({t:fr.t,v:features(fr.p)}));
+  const T=seg.at(-1).t-seg[0].t; if(seg.length<6||T<300) return null;
+  const tpl=resample(seg), w=normW(stdv(tpl));
+  return {tpl,T,w,s:spread(tpl,w)};
+}
+$('save').onclick=()=>{
+  const tp=buildTemplate(ed.frames,ed.s0,ed.s1);
+  if(!tp){$('rhint').textContent='The selection is too short. Make it cover one full rep.';return}
+  const m={...tp,id:ed.id||Date.now(),name:$('nm').value.trim()||'Movement '+(mvs.length+1),frames:ed.frames,s0:ed.s0,s1:ed.s1};
+  const i=mvs.findIndex(x=>x.id===m.id); i>=0?mvs[i]=m:mvs.push(m);
+  if(!save('rr2_mv',mvs)){ // storage full: keep only the trimmed rep
+    m.frames=ed.frames.slice(ed.s0,ed.s1+1); m.s0=0; m.s1=m.frames.length-1; save('rr2_mv',mvs);
+  }
+  ed=null; go('home');
+};
+
+// ---------- matching ----------
 function resample(arr){
   const out=[],L=arr.length;
   for(let i=0;i<N;i++){const p=i*(L-1)/(N-1),a=Math.floor(p),b=Math.min(L-1,a+1),f=p-a;out.push(arr[a].v.map((x,k)=>x+(arr[b].v[k]-x)*f))}
-  const m=out[0].map((_,k)=>out.reduce((s,r)=>s+r[k],0)/N);
+  const m=out[0].map((_,k)=>avg(out.map(r=>r[k])));
   return out.map(r=>r.map((x,k)=>x-m[k]));
 }
-const stds=seq=>seq[0].map((_,k)=>Math.sqrt(seq.reduce((s,r)=>s+r[k]*r[k],0)/seq.length));
-const spread=(seq,w)=>{const s=stds(seq);return s.reduce((a,x,k)=>a+x*w[k],0)||1e-3};
+const spread=(seq,w)=>stdv(seq).reduce((a,x,k)=>a+x*w[k],0)||1e-3;
 function dtw(A,B,w){
   const D=Array.from({length:N+1},()=>new Float64Array(N+1).fill(Infinity));D[0][0]=0;
   for(let i=1;i<=N;i++)for(let j=Math.max(1,i-BAND);j<=Math.min(N,i+BAND);j++){
@@ -164,96 +416,72 @@ function dtw(A,B,w){
   }
   return D[N][N]/(2*N);
 }
-const energy=(a,b)=>a.v.reduce((s,x,k)=>s+Math.abs(x-b.v[k]),0);
 
-// ---------- countdown ----------
-function countdown(sec,then){
-  cdEnd=performance.now()+sec*1000; noise=[];
-  const step=()=>{const left=Math.ceil((cdEnd-performance.now())/1000);
-    if(left>0){$('big').textContent=left;setTimeout(step,100)}else{$('big').textContent='';beep(1200);then()}};
-  step();
+// ---------- 3 · COUNT ----------
+async function startCount(id){
+  const m=mvs.find(x=>x.id===id); if(!m) return;
+  cs={m,phase:'ready',buf:[],reps:0,lastRep:0}; $('count').textContent=0; $('cntName').textContent=m.name;
+  $('cntGo').textContent='Start'; $('cntGo').className=''; go('cnt');
+  if(await ensureCam()) msg('Tap Start, then get into position');
 }
-
-// ---------- recording ----------
-$('rec').onclick=()=>{
-  if(mode!=='idle'){mode='idle';$('big').textContent='';$('rec').textContent='Record';$('rec').className='n';msg('Cancelled');return}
-  mode='cd-rec'; $('rec').textContent='Cancel'; $('rec').className='n red'; msg('Get in position…');
-  countdown(5,()=>{mode='rec';recBuf=[];recState={moving:false,moveStart:0,stillSince:0,start:performance.now()};msg('Go: one rep, then hold still')});
-};
-function finishRec(){
-  mode='idle'; $('rec').textContent='Record'; $('rec').className='n';
-  const nz=noise.length?noise.reduce((a,b)=>a+b)/noise.length:0.02, th=Math.max(nz*2.5,0.04);
-  const en=recBuf.map((s,i)=>i?energy(s,recBuf[i-1]):0);
-  let a=0,b=recBuf.length-1; while(a<b&&en[a]<th)a++; while(b>a&&en[b]<th)b--;
-  const seg=recBuf.slice(Math.max(0,a-2),b+3), T=seg.length>1?seg.at(-1).t-seg[0].t:0;
-  if(seg.length<10||T<400) return msg('Didn’t catch a clear rep. Try again.');
-  const tpl=resample(seg), sd=stds(tpl), tot=sd.reduce((x,y)=>x+y,0)||1;
-  const w=sd.map(x=>(x/tot)*0.85+0.15/sd.length);     // moving joints matter most
-  const name=$('name').value.trim()||'Movement '+(mvs.length+1);
-  mvs.push({id:Date.now(),name,tpl,T,w,s:spread(tpl,w)}); save('rrc_mv',mvs);
-  renderMv(mvs.length-1); $('cnt').disabled=false; $('name').value='';
-  msg(`Saved “${name}” (${(T/1000).toFixed(1)} s per rep)`); say('Saved');
+function cntFrame(s){
+  if(!cs) return;
+  if(!s&&cs.phase==='run') msg('Can’t see you. Step into frame');
+  if(cs.phase!=='run'||!s) return;
+  msg('Counting: '+cs.m.name);
+  cs.buf.push(s); const keep=s.t-(cs.m.T*2.2+500); while(cs.buf.length&&cs.buf[0].t<keep) cs.buf.shift();
 }
-
-// ---------- per-frame ----------
-function onFrame(s){
-  if(mode==='cd-rec'||mode==='cd-cnt'){ if(this_prev) noise.push(energy(s,this_prev)); }
-  if(mode==='rec'){
-    recBuf.push(s); const n=recBuf.length; if(n<2){this_prev=s;return}
-    const nz=noise.length?noise.reduce((a,b)=>a+b)/noise.length:0.02, th=Math.max(nz*2.5,0.04);
-    const e=energy(s,recBuf[n-2]), st=recState;
-    if(e>th){ if(!st.moving){st.moving=true;st.moveStart=s.t} st.stillSince=0 }
-    else if(st.moving){ st.stillSince=st.stillSince||s.t; if(s.t-st.stillSince>800&&s.t-st.moveStart>500) finishRec() }
-    if(s.t-st.start>10000) finishRec();
-  }
-  if(mode==='cnt'){ buf.push(s); const m=cur(); const keep=s.t-(m?m.T*2.2+500:4000); while(buf.length&&buf[0].t<keep) buf.shift(); }
-  this_prev=s;
-}
-let this_prev=null;
-
-// ---------- counting ----------
 function tick(){
-  if(mode!=='cnt') return;
-  const m=cur(), now=performance.now(), thr=+$('sens').value; let best=Infinity;
-  if(m&&buf.length>8&&now-lastRep>m.T*0.6){
+  if(!cs||cs.phase!=='run'||screen!=='cnt') return;
+  const m=cs.m, now=performance.now(), thr=+$('sens').value; let best=Infinity;
+  if(cs.buf.length>8&&now-cs.lastRep>m.T*0.6){
     for(const f of[0.7,0.85,1,1.2,1.45]){
-      const w=buf.filter(s=>s.t>=now-m.T*f); if(w.length<8) continue;
-      const Wn=resample(w); if(spread(Wn,m.w)<m.s*0.4) continue;
+      const win=cs.buf.filter(s=>s.t>=now-m.T*f); if(win.length<8) continue;
+      const Wn=resample(win); if(spread(Wn,m.w)<m.s*0.4) continue;
       best=Math.min(best,dtw(Wn,m.tpl,m.w)/m.s);
     }
-    if(best<thr){reps++;lastRep=now;buf=[];bump()}
+    if(best<thr){cs.reps++;cs.lastRep=now;cs.buf=[];bump()}
   }
   const sc=isFinite(best)?Math.min(best,1):1;
   $('bar').style.width=Math.max(2,(1-sc)*100)+'%';
   $('scoreTxt').textContent=isFinite(best)?Math.round((1-sc)*100)+'%':'–';
   setTimeout(tick,70);
 }
-function beep(f){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.15;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.09)}catch(e){}}
-function say(t){if(!$('speak').checked)return;try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(String(t)))}catch(e){}}
-function bump(){const c=$('count');c.textContent=reps;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop');$('speak').checked?say(reps):beep(880)}
-
-$('cnt').onclick=async()=>{
-  if(mode==='idle'){
-    if(!cur()) return;
-    mode='cd-cnt'; $('cnt').textContent='Stop & log'; $('cnt').className='red';
-    try{wl=await navigator.wakeLock?.request('screen')}catch(e){}
-    msg('Get in position…');
-    countdown(5,()=>{mode='cnt';buf=[];lastRep=performance.now();msg('Counting: '+cur().name);tick()});
-  }else if(mode==='cnt'||mode==='cd-cnt'){
-    mode='idle'; $('big').textContent=''; $('cnt').textContent='Start counting'; $('cnt').className='';
-    try{wl&&wl.release()}catch(e){}
-    if(reps){logs.unshift({n:cur().name,r:reps,d:new Date().toISOString()});logs=logs.slice(0,100);save('rrc_log',logs);renderLog()}
-    msg(reps?`Logged ${reps} reps`:'Stopped');
-  }
+function bump(){const c=$('count');c.textContent=cs.reps;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop');$('speak').checked?say(cs.reps):beep(880)}
+$('cntGo').onclick=()=>{
+  if(!cs) return;
+  if(cs.phase==='ready'){
+    cs.phase='cd'; $('cntGo').textContent='Stop & log'; $('cntGo').className='red';
+    let left=5; $('big').textContent=left; beep(660); msg('Get into position…');
+    cdTimer=setInterval(()=>{left--; if(left>0){$('big').textContent=left;beep(660)} else {clearInterval(cdTimer);cdTimer=null;$('big').textContent='';beep(1200);say('Go');cs.phase='run';cs.buf=[];cs.lastRep=performance.now();tick()}},1000);
+  }else stopCount();
 };
-$('reset').onclick=()=>{reps=0;$('count').textContent=0;buf=[]};
-$('del').onclick=()=>{const i=$('mv').selectedIndex;if(i<0||!mvs.length||mode!=='idle')return;mvs.splice(i,1);save('rrc_mv',mvs);renderMv(0);$('cnt').disabled=!mvs.length||!stream};
+function stopCount(){
+  if(cdTimer){clearInterval(cdTimer);cdTimer=null} $('big').textContent='';
+  if(cs.reps){logs.unshift({n:cs.m.name,r:cs.reps,d:new Date().toISOString()});logs=logs.slice(0,100);save('rr2_log',logs)}
+  msg(cs.reps?`Logged ${cs.reps} reps`:'Stopped');
+  cs.phase='ready'; cs.reps=0; $('count').textContent=0; $('cntGo').textContent='Start'; $('cntGo').className='';
+}
+$('cntReset').onclick=()=>{if(!cs)return;cs.reps=0;cs.buf=[];$('count').textContent=0};
+$('cntBack').onclick=()=>{if(cs&&cs.phase!=='ready')stopCount();cs=null;go('home')};
 const setThr=()=>{const v=+$('sens').value;$('thr').style.left=(1-v)*100+'%';$('sensTxt').textContent=v<0.3?'strict':v>0.6?'loose':'normal'};
 $('sens').oninput=setThr; setThr();
 
-function renderMv(sel){$('mv').innerHTML=mvs.length?mvs.map(m=>`<option>${esc(m.name)}</option>`).join(''):'<option>No saved movements yet</option>';if(mvs.length)$('mv').selectedIndex=Math.min(sel,mvs.length-1)}
-function renderLog(){$('log').innerHTML=logs.length?logs.map(l=>`<li><span>${esc(l.n)} · <b>${+l.r}</b> reps</span><span>${esc(new Date(l.d).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))}</span></li>`).join(''):'<li><span>No sets logged yet</span><span></span></li>'}
-renderMv(0); renderLog();
+// ---------- home ----------
+function renderHome(){
+  $('mvList').innerHTML=mvs.length?mvs.map(m=>`<div class="mv"><div class="nm">${esc(m.name)}<small>${(m.T/1000).toFixed(1)} s per rep</small></div>
+    <button data-a="cnt" data-id="${+m.id}">Count</button><button class="sec" data-a="edit" data-id="${+m.id}">Edit</button><button class="sec" data-a="del" data-id="${+m.id}">Delete</button></div>`).join('')
+    :'<p class="empty">No movements yet. Record your first one.</p>';
+  $('log').innerHTML=logs.length?logs.map(l=>`<li><span>${esc(l.n)} · <b>${+l.r}</b> reps</span><span>${esc(new Date(l.d).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))}</span></li>`).join(''):'<li><span>No sets logged yet</span><span></span></li>';
+}
+$('mvList').onclick=ev=>{
+  const b=ev.target.closest('button'); if(!b) return; const id=+b.dataset.id, m=mvs.find(x=>x.id===id); if(!m) return;
+  if(b.dataset.a==='cnt') startCount(id);
+  else if(b.dataset.a==='edit'){ if(!m.frames){alertMsg(b);return} openEditor(m); }
+  else if(b.dataset.a==='del'){ if(b.dataset.sure){mvs=mvs.filter(x=>x.id!==id);save('rr2_mv',mvs);renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
+};
+function alertMsg(b){b.textContent='No recording';b.disabled=true}
+go('home');
 }
 </script>
 </body>
