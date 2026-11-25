@@ -12,6 +12,7 @@
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Red Hat Text",system-ui,sans-serif;padding:max(12px,env(safe-area-inset-top)) 12px max(30px,env(safe-area-inset-bottom))}
 main{max-width:560px;margin:auto}
 h1{font:800 26px/1.05 "Red Hat Display",sans-serif;margin:4px 0 10px}
+#ver{font:600 13px "Red Hat Text",sans-serif;color:var(--dim);margin-left:6px;vertical-align:middle}
 h2{font:800 18px "Red Hat Display",sans-serif;margin:0 0 8px}
 .steps{display:flex;gap:6px;margin-bottom:12px}
 .steps span{flex:1;text-align:center;font-size:13px;font-weight:600;padding:6px 4px;border-radius:999px;background:var(--card);color:var(--dim)}
@@ -62,7 +63,7 @@ ul li span:last-child{color:var(--dim);white-space:nowrap}
 </head>
 <body>
 <main>
-<h1>Rep Recorder</h1>
+<h1>Rep Recorder <small id="ver">v0.6 · 2026-11-25 22:00</small></h1>
 <div class="steps"><span data-s="rec">1 · Record</span><span data-s="rev">2 · Review</span><span data-s="cnt">3 · Count</span></div>
 
 <div class="stage" id="camStage" hidden>
