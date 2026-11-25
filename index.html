@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rep Recorder</title>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;800&family=Red+Hat+Text:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1433;--card:#141f47;--ink:#eef1ff;--dim:#9aa6d6;--acc:#f7e463;--hot:#e8452c;--ok:#4fc1c6}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Red Hat Text",system-ui,sans-serif;padding:max(12px,env(safe-area-inset-top)) 12px max(30px,env(safe-area-inset-bottom))}
+main{max-width:560px;margin:auto}
+h1{font:800 28px/1.05 "Red Hat Display",sans-serif;margin:6px 0 10px}
+h2{font:800 18px "Red Hat Display",sans-serif;margin:0 0 10px}
+.stage{position:relative;background:#000;border-radius:18px;overflow:hidden;aspect-ratio:3/4;margin-bottom:12px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+video{display:none}
+#count{position:absolute;right:14px;top:6px;font:800 clamp(72px,24vw,120px)/1 "Red Hat Display",sans-serif;color:var(--acc);text-shadow:0 3px 18px #0009}
+#count.pop{animation:pop .25s}@keyframes pop{50%{transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){#count.pop{animation:none}}
+#big{position:absolute;inset:0;display:grid;place-items:center;font:800 26vw/1 "Red Hat Display",sans-serif;color:#fff;text-shadow:0 4px 24px #000;pointer-events:none}
+#msg{position:absolute;left:12px;bottom:10px;right:12px;font-weight:600;text-shadow:0 1px 6px #000}
+#startCam{position:absolute;inset:0;margin:auto;width:max-content;height:52px}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px}
+button{font:600 16px "Red Hat Text",sans-serif;min-height:48px;padding:0 18px;border-radius:12px;border:0;background:var(--acc);color:#0b1433;cursor:pointer}
+button.sec{background:#26336a;color:var(--ink)}button.red{background:var(--hot);color:#fff}
+button:disabled{opacity:.4}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
+input,select{font:16px "Red Hat Text",sans-serif;min-height:48px;padding:0 12px;border-radius:12px;border:1px solid #33407a;background:#0e1838;color:var(--ink);width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 auto}.row>.n{flex:0 0 auto}
+.meter{height:12px;background:#0e1838;border-radius:6px;position:relative;overflow:hidden;margin-top:12px}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--ok);transition:width .08s}
+.meter b{position:absolute;top:0;bottom:0;width:2px;background:var(--hot)}
+.lbl{display:flex;justify-content:space-between;color:var(--dim);font-size:13px;margin:6px 0 4px}
+.hint{color:var(--dim);font-size:14px;margin:8px 0 0}
+input[type=range]{min-height:32px;padding:0;border:0;background:none}
+label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:14px}label.ck input{width:20px;min-height:20px}
+ul{list-style:none;padding:0;margin:0}li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #26336a;font-size:15px}
+li span:last-child{color:var(--dim);white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+<h1>Rep Recorder</h1>
+
+<div class="stage">
+  <video id="vid" playsinline muted></video>
+  <canvas id="cv"></canvas>
+  <div id="count">0</div>
+  <div id="big"></div>
+  <div id="msg"></div>
+  <button id="startCam">Start camera</button>
+</div>
+
+<section class="card">
+<h2>Teach a movement</h2>
+<div class="row"><input id="name" placeholder="Name, e.g. Goblet squat" maxlength="40"><button class="n" id="rec" disabled>Record</button></div>
+<p class="hint">Prop the phone so your whole body is in view. After a 5 s countdown, do one rep and then hold still. Recording stops on its own.</p>
+</section>
+
+<section class="card">
+<h2>Count reps</h2>
+<div class="row"><select id="mv"></select><button class="sec n" id="del">Delete</button></div>
+<div class="meter"><i id="bar"></i><b id="thr"></b></div>
+<div class="lbl"><span>Match with saved rep</span><span id="scoreTxt">–</span></div>
+<div class="lbl"><span>Sensitivity</span><span id="sensTxt"></span></div>
+<input type="range" id="sens" min="0.15" max="0.9" step="0.025" value="0.4">
+<div class="row" style="margin-top:10px"><button id="cnt" disabled>Start counting</button><button class="sec n" id="reset">Reset</button><button class="sec n" id="flip">Flip camera</button></div>
+<label class="ck" style="margin-top:10px"><input type="checkbox" id="speak" checked> Say the count out loud</label>
+</section>
+
+<section class="card">
+<h2>Log</h2>
+<ul id="log"></ul>
+</section>
+</main>
+
+<script type="module">
+import {FilesetResolver, PoseLandmarker} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+{
+const $=id=>document.getElementById(id);
+const N=32, BAND=6;
+const MODEL="https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const BONES=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+const ANG=[[11,13,15],[12,14,16],[23,11,13],[24,12,14],[11,23,25],[12,24,26],[23,25,27],[24,26,28]];
+let pose=null, stream=null, facing='user', mode='idle', feat=null, lastLm=null;
+let recBuf=[], recState=null, buf=[], reps=0, lastRep=0, ac=null, wl=null, cdEnd=0, noise=[];
+const vid=$('vid'), cv=$('cv'), ctx=cv.getContext('2d');
+
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let mvs=load('rrc_mv',[]), logs=load('rrc_log',[]);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const msg=t=>$('msg').textContent=t;
+const cur=()=>mvs[$('mv').selectedIndex];
+
+// ---------- camera + model ----------
+async function startCam(){
+  $('startCam').disabled=true; msg('Loading pose model…');
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(!pose){
+      const fs=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+      pose=await PoseLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:MODEL,delegate:"GPU"},runningMode:"VIDEO",numPoses:1});
+    }
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:720},height:{ideal:960}},audio:false});
+    vid.srcObject=stream; await vid.play();
+    $('startCam').style.display='none'; $('rec').disabled=false; $('cnt').disabled=!mvs.length;
+    msg('Step back until your whole body is visible');
+    requestAnimationFrame(loop);
+  }catch(err){msg('Camera/model failed: '+err.message+' (needs HTTPS and camera permission)'); $('startCam').disabled=false}
+}
+$('startCam').onclick=startCam;
+$('flip').onclick=()=>{facing=facing==='user'?'environment':'user'; if(stream) startCam()};
+
+// ---------- features: joint angles + wrist heights, scale-free ----------
+function features(lm,ar){
+  const P=i=>({x:lm[i].x*ar,y:lm[i].y});
+  const ang=([a,b,c])=>{const A=P(a),B=P(b),C=P(c);const v1x=A.x-B.x,v1y=A.y-B.y,v2x=C.x-B.x,v2y=C.y-B.y;
+    return Math.acos(Math.max(-1,Math.min(1,(v1x*v2x+v1y*v2y)/(Math.hypot(v1x,v1y)*Math.hypot(v2x,v2y)||1))))};
+  const sh=(lm[11].y+lm[12].y)/2, hp=(lm[23].y+lm[24].y)/2, torso=Math.abs(hp-sh)||0.2;
+  return [...ANG.map(ang),(sh-lm[15].y)/torso,(sh-lm[16].y)/torso];
+}
+
+let lastTs=-1;
+function loop(){
+  if(!stream) return;
+  const W=vid.videoWidth, H=vid.videoHeight;
+  if(W&&cv.width!==W){cv.width=W;cv.height=H}
+  ctx.save(); if(facing==='user'){ctx.translate(W,0);ctx.scale(-1,1)}
+  ctx.drawImage(vid,0,0,W,H);
+  const ts=performance.now();
+  if(pose&&ts>lastTs){
+    lastTs=ts;
+    const r=pose.detectForVideo(vid,ts); const lm=r.landmarks&&r.landmarks[0];
+    if(lm){
+      const vis=[11,12,23,24].every(i=>(lm[i].visibility??1)>0.5);
+      ctx.lineWidth=Math.max(3,W/160); ctx.strokeStyle=vis?'#4fc1c6':'#e8452c';
+      for(const[a,b]of BONES){ctx.beginPath();ctx.moveTo(lm[a].x*W,lm[a].y*H);ctx.lineTo(lm[b].x*W,lm[b].y*H);ctx.stroke()}
+      ctx.fillStyle='#f7e463'; for(const i of[11,12,13,14,15,16,23,24,25,26,27,28]){ctx.beginPath();ctx.arc(lm[i].x*W,lm[i].y*H,W/110,0,7);ctx.fill()}
+      if(vis){const f=features(lm,W/H); feat=feat?feat.map((x,i)=>x+0.5*(f[i]-x)):f; onFrame({t:ts,v:feat.slice()})}
+      else if(mode==='idle') msg('Shoulders and hips must be in view');
+    }else if(mode==='idle') msg('No person found');
+  }
+  ctx.restore();
+  requestAnimationFrame(loop);
+}
+
+// ---------- signal helpers ----------
+function resample(arr){
+  const out=[],L=arr.length;
+  for(let i=0;i<N;i++){const p=i*(L-1)/(N-1),a=Math.floor(p),b=Math.min(L-1,a+1),f=p-a;out.push(arr[a].v.map((x,k)=>x+(arr[b].v[k]-x)*f))}
+  const m=out[0].map((_,k)=>out.reduce((s,r)=>s+r[k],0)/N);
+  return out.map(r=>r.map((x,k)=>x-m[k]));
+}
+const stds=seq=>seq[0].map((_,k)=>Math.sqrt(seq.reduce((s,r)=>s+r[k]*r[k],0)/seq.length));
+const spread=(seq,w)=>{const s=stds(seq);return s.reduce((a,x,k)=>a+x*w[k],0)||1e-3};
+function dtw(A,B,w){
+  const D=Array.from({length:N+1},()=>new Float64Array(N+1).fill(Infinity));D[0][0]=0;
+  for(let i=1;i<=N;i++)for(let j=Math.max(1,i-BAND);j<=Math.min(N,i+BAND);j++){
+    let c=0;for(let k=0;k<w.length;k++){const d=A[i-1][k]-B[j-1][k];c+=w[k]*d*d}
+    D[i][j]=Math.sqrt(c)+Math.min(D[i-1][j],D[i][j-1],D[i-1][j-1]);
+  }
+  return D[N][N]/(2*N);
+}
+const energy=(a,b)=>a.v.reduce((s,x,k)=>s+Math.abs(x-b.v[k]),0);
+
+// ---------- countdown ----------
+function countdown(sec,then){
+  cdEnd=performance.now()+sec*1000; noise=[];
+  const step=()=>{const left=Math.ceil((cdEnd-performance.now())/1000);
+    if(left>0){$('big').textContent=left;setTimeout(step,100)}else{$('big').textContent='';beep(1200);then()}};
+  step();
+}
+
+// ---------- recording ----------
+$('rec').onclick=()=>{
+  if(mode!=='idle'){mode='idle';$('big').textContent='';$('rec').textContent='Record';$('rec').className='n';msg('Cancelled');return}
+  mode='cd-rec'; $('rec').textContent='Cancel'; $('rec').className='n red'; msg('Get in position…');
+  countdown(5,()=>{mode='rec';recBuf=[];recState={moving:false,moveStart:0,stillSince:0,start:performance.now()};msg('Go: one rep, then hold still')});
+};
+function finishRec(){
+  mode='idle'; $('rec').textContent='Record'; $('rec').className='n';
+  const nz=noise.length?noise.reduce((a,b)=>a+b)/noise.length:0.02, th=Math.max(nz*2.5,0.04);
+  const en=recBuf.map((s,i)=>i?energy(s,recBuf[i-1]):0);
+  let a=0,b=recBuf.length-1; while(a<b&&en[a]<th)a++; while(b>a&&en[b]<th)b--;
+  const seg=recBuf.slice(Math.max(0,a-2),b+3), T=seg.length>1?seg.at(-1).t-seg[0].t:0;
+  if(seg.length<10||T<400) return msg('Didn’t catch a clear rep. Try again.');
+  const tpl=resample(seg), sd=stds(tpl), tot=sd.reduce((x,y)=>x+y,0)||1;
+  const w=sd.map(x=>(x/tot)*0.85+0.15/sd.length);     // moving joints matter most
+  const name=$('name').value.trim()||'Movement '+(mvs.length+1);
+  mvs.push({id:Date.now(),name,tpl,T,w,s:spread(tpl,w)}); save('rrc_mv',mvs);
+  renderMv(mvs.length-1); $('cnt').disabled=false; $('name').value='';
+  msg(`Saved “${name}” (${(T/1000).toFixed(1)} s per rep)`); say('Saved');
+}
+
+// ---------- per-frame ----------
+function onFrame(s){
+  if(mode==='cd-rec'||mode==='cd-cnt'){ if(this_prev) noise.push(energy(s,this_prev)); }
+  if(mode==='rec'){
+    recBuf.push(s); const n=recBuf.length; if(n<2){this_prev=s;return}
+    const nz=noise.length?noise.reduce((a,b)=>a+b)/noise.length:0.02, th=Math.max(nz*2.5,0.04);
+    const e=energy(s,recBuf[n-2]), st=recState;
+    if(e>th){ if(!st.moving){st.moving=true;st.moveStart=s.t} st.stillSince=0 }
+    else if(st.moving){ st.stillSince=st.stillSince||s.t; if(s.t-st.stillSince>800&&s.t-st.moveStart>500) finishRec() }
+    if(s.t-st.start>10000) finishRec();
+  }
+  if(mode==='cnt'){ buf.push(s); const m=cur(); const keep=s.t-(m?m.T*2.2+500:4000); while(buf.length&&buf[0].t<keep) buf.shift(); }
+  this_prev=s;
+}
+let this_prev=null;
+
+// ---------- counting ----------
+function tick(){
+  if(mode!=='cnt') return;
+  const m=cur(), now=performance.now(), thr=+$('sens').value; let best=Infinity;
+  if(m&&buf.length>8&&now-lastRep>m.T*0.6){
+    for(const f of[0.7,0.85,1,1.2,1.45]){
+      const w=buf.filter(s=>s.t>=now-m.T*f); if(w.length<8) continue;
+      const Wn=resample(w); if(spread(Wn,m.w)<m.s*0.4) continue;
+      best=Math.min(best,dtw(Wn,m.tpl,m.w)/m.s);
+    }
+    if(best<thr){reps++;lastRep=now;buf=[];bump()}
+  }
+  const sc=isFinite(best)?Math.min(best,1):1;
+  $('bar').style.width=Math.max(2,(1-sc)*100)+'%';
+  $('scoreTxt').textContent=isFinite(best)?Math.round((1-sc)*100)+'%':'–';
+  setTimeout(tick,70);
+}
+function beep(f){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.15;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+.09)}catch(e){}}
+function say(t){if(!$('speak').checked)return;try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(String(t)))}catch(e){}}
+function bump(){const c=$('count');c.textContent=reps;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop');$('speak').checked?say(reps):beep(880)}
+
+$('cnt').onclick=async()=>{
+  if(mode==='idle'){
+    if(!cur()) return;
+    mode='cd-cnt'; $('cnt').textContent='Stop & log'; $('cnt').className='red';
+    try{wl=await navigator.wakeLock?.request('screen')}catch(e){}
+    msg('Get in position…');
+    countdown(5,()=>{mode='cnt';buf=[];lastRep=performance.now();msg('Counting: '+cur().name);tick()});
+  }else if(mode==='cnt'||mode==='cd-cnt'){
+    mode='idle'; $('big').textContent=''; $('cnt').textContent='Start counting'; $('cnt').className='';
+    try{wl&&wl.release()}catch(e){}
+    if(reps){logs.unshift({n:cur().name,r:reps,d:new Date().toISOString()});logs=logs.slice(0,100);save('rrc_log',logs);renderLog()}
+    msg(reps?`Logged ${reps} reps`:'Stopped');
+  }
+};
+$('reset').onclick=()=>{reps=0;$('count').textContent=0;buf=[]};
+$('del').onclick=()=>{const i=$('mv').selectedIndex;if(i<0||!mvs.length||mode!=='idle')return;mvs.splice(i,1);save('rrc_mv',mvs);renderMv(0);$('cnt').disabled=!mvs.length||!stream};
+const setThr=()=>{const v=+$('sens').value;$('thr').style.left=(1-v)*100+'%';$('sensTxt').textContent=v<0.3?'strict':v>0.6?'loose':'normal'};
+$('sens').oninput=setThr; setThr();
+
+function renderMv(sel){$('mv').innerHTML=mvs.length?mvs.map(m=>`<option>${esc(m.name)}</option>`).join(''):'<option>No saved movements yet</option>';if(mvs.length)$('mv').selectedIndex=Math.min(sel,mvs.length-1)}
+function renderLog(){$('log').innerHTML=logs.length?logs.map(l=>`<li><span>${esc(l.n)} · <b>${+l.r}</b> reps</span><span>${esc(new Date(l.d).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))}</span></li>`).join(''):'<li><span>No sets logged yet</span><span></span></li>'}
+renderMv(0); renderLog();
+}
+</script>
+</body>
+</html>
