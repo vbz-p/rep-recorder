@@ -79,12 +79,37 @@ ul li b{font:900 24px/1 var(--cond);font-stretch:62%}
 ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:13px}
 .empty{color:var(--dim);font-size:15px;padding:6px 0}
 #cntName{font-size:40px}
+select{font:16px "Archivo",sans-serif;min-height:50px;padding:0 12px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);width:100%}
+input.num{width:76px;text-align:center;font-weight:700}
+.step{display:grid;grid-template-columns:minmax(0,1fr) 62px auto;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.step .mvb{display:flex}.step .mvb button{min-height:44px;min-width:32px;padding:0 4px}
+.step input.num{width:62px}
+.step select{padding:0 8px}
+.field{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:10px;align-items:center;padding:8px 0}
+.field span{font-weight:600}
+.wo{padding:14px 0;border-bottom:1px solid var(--line)}
+.wo .nm{font:900 32px/.92 var(--cond);font-stretch:62%}
+.wo .nm small{display:block;font:500 13px "Archivo",sans-serif;font-stretch:100%;color:var(--dim);margin-top:6px;line-height:1.4}
+.wo .acts{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
+#newWo{width:100%;margin-top:14px}
+#rest{position:absolute;inset:0;background:var(--sig);color:#fff;display:grid;align-content:center;justify-items:center;text-align:center;padding:20px;z-index:2}
+#rest small{font-weight:700;font-size:18px}
+#rest b{font:900 clamp(130px,48vw,240px)/.85 var(--cond);font-stretch:62%;font-variant-numeric:tabular-nums}
+#restNext{font-weight:600;font-size:18px;margin-top:10px}
+#restNext em{display:block;font:900 44px/1 var(--cond);font-stretch:62%;font-style:normal;margin-top:4px}
+.plan{list-style:none;padding:0;margin:10px 0 0}
+.plan li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--dim)}
+.plan li.now{color:var(--ink);font-weight:700}.plan li.now::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sig);align-self:center;margin-right:-4px}
+.plan li span:first-child{flex:1}
+.plan li.ok{color:var(--ink)}.plan li.ok span:last-child::after{content:" ✓";color:var(--sig)}
+.plan .set{font-weight:700;color:var(--ink);border-bottom:0;padding:14px 0 2px}
+.sum{font:900 90px/.85 var(--cond);font-stretch:62%}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <main>
-<h1>Rep<span class="r">.</span>Recorder</h1><span id="ver">v0.8.1 · 2026-11-26 07:05</span>
+<h1>Rep<span class="r">.</span>Recorder</h1><span id="ver">v0.9 · 2026-11-27 22:55</span>
 <div class="steps"><span data-s="rec">1 · Record</span><span data-s="rev">2 · Review</span><span data-s="cnt">3 · Count</span></div>
 
 <div class="stage" id="camStage" hidden>
@@ -93,6 +118,7 @@ ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:13px}
   <div id="recDot">REC</div>
   <div id="ring" hidden></div><div id="count" hidden><small>reps</small><span id="cnum">0</span></div><div id="pbar" hidden><i></i></div>
   <div id="plus">+1</div>
+  <div id="rest" hidden><small>Rest</small><b id="restT">1:00</b><div id="restNext"></div><button class="sec" id="restSkip" style="margin-top:18px;color:#fff;box-shadow:inset 0 0 0 1.5px #fff">Skip rest</button></div>
   <div id="big"></div>
   <div id="msg"></div>
 </div>
@@ -106,7 +132,39 @@ ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:13px}
     <div id="mvList"></div>
     <button id="newMv" style="width:100%;margin-top:12px">+ Record a new movement</button>
   </div>
+  <div class="card">
+    <h2>Workouts</h2>
+    <div id="woList"></div>
+    <button class="sec" id="newWo">+ Build a workout</button>
+  </div>
   <div class="card"><h2>Log</h2><ul id="log"></ul></div>
+</section>
+
+<!-- WORKOUT BUILDER -->
+<section data-screen="wb" hidden>
+  <div class="card">
+    <h2>Build a workout</h2>
+    <input id="woName" placeholder="Name, e.g. Morning circuit" maxlength="40">
+    <div id="woSteps" style="margin-top:8px"></div>
+    <button class="sec" id="woAdd" style="width:100%;margin-top:10px">+ Add movement</button>
+  </div>
+  <div class="card">
+    <label class="field"><span>Sets</span><input class="num" id="woRounds" type="number" inputmode="numeric" min="1" max="20" value="3"></label>
+    <label class="field"><span>Rest between movements (s)</span><input class="num" id="woRestEx" type="number" inputmode="numeric" min="0" max="600" step="5" value="60"></label>
+    <label class="field"><span>Rest between sets (s)</span><input class="num" id="woRestSet" type="number" inputmode="numeric" min="0" max="900" step="5" value="60"></label>
+    <p class="hint" id="woHint"></p>
+    <div class="row" style="margin-top:10px"><button id="woSave">Save workout</button><button class="sec n" id="woCancel">Cancel</button></div>
+  </div>
+</section>
+
+<!-- WORKOUT RUNNER -->
+<section data-screen="wo" hidden>
+  <div class="card">
+    <h2 id="woTitle"></h2>
+    <div id="woBody"></div>
+    <div class="row" id="woCtl" style="margin-top:12px"><button class="sec n" id="woMinus" aria-label="Remove one rep">−1</button><button class="sec n" id="woPlus" aria-label="Add one rep">+1</button><button class="sec" id="woNext">Next</button><button class="red n" id="woEnd">End</button></div>
+    <p class="hint" id="woTip">Miscounted? Use −1 / +1. Next finishes this movement now.</p>
+  </div>
 </section>
 
 <!-- 1 RECORD -->
@@ -203,11 +261,12 @@ const clamp=x=>Math.max(-1,Math.min(1,x));
 function go(s){
   screen=s;
   document.querySelectorAll('[data-screen]').forEach(el=>el.hidden=el.dataset.screen!==s);
+  document.querySelector('.steps').hidden=s==='wb'||s==='wo';
   document.querySelectorAll('.steps span').forEach(el=>el.classList.toggle('on',el.dataset.s===s));
-  $('camStage').hidden=!(s==='rec'||s==='cnt'); $('revStage').hidden=s!=='rev';
-  $('count').hidden=$('pbar').hidden=s!=='cnt'; $('recDot').style.display='none'; $('big').textContent='';
+  $('camStage').hidden=!(s==='rec'||s==='cnt'||s==='wo'); $('rest').hidden=true; $('revStage').hidden=s!=='rev';
+  $('count').hidden=$('pbar').hidden=!(s==='cnt'||s==='wo'); $('count').querySelector('small').textContent='reps'; $('recDot').style.display='none'; $('big').textContent='';
   if(cdTimer){clearInterval(cdTimer);cdTimer=null}
-  if(s==='rec'||s==='cnt'){try{navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{})}catch(e){}}
+  if(s==='rec'||s==='cnt'||s==='wo'){try{navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{})}catch(e){}}
   else{try{wake&&wake.release()}catch(e){} wake=null}
   if(s==='home') renderHome();
   scrollTo(0,0);
@@ -253,7 +312,7 @@ let lastTs=-1, sh2=null;
 function loop(now){
   requestAnimationFrame(loop);
   if(screen==='rev'){renderRev(now);return}
-  if(!(screen==='rec'||screen==='cnt')||!stream||!vid.videoWidth||!pose||busy) return;
+  if(!(screen==='rec'||screen==='cnt'||screen==='wo')||!stream||!vid.videoWidth||!pose||busy) return;
   const W=vid.videoWidth,H=vid.videoHeight; if(cv.width!==W){cv.width=W;cv.height=H}
   const ts=performance.now(); if(ts<=lastTs) return; lastTs=ts;
   ctx.save(); if(facing==='user'){ctx.translate(W,0);ctx.scale(-1,1)}
@@ -683,7 +742,7 @@ function cntFrame(s){
   if(!cs) return;
   if(cs.phase!=='run') return;
   if(!s){msg('Can’t see you. Step into frame');return}
-  msg('Counting: '+cs.m.name+(cs.sideTxt||''));
+  msg((cs.label||'Counting: '+cs.m.name)+(cs.sideTxt||''));
   const m=cs.m, thr=+$('sens').value;
   const res=cs.tr.map(tr=>stepSide(tr,s,thr,m.T));
   const prog=Math.max(...res.map(r=>r.prog));
@@ -700,8 +759,9 @@ function repDone(){
   setRing(1,true); setTimeout(()=>{if(cs)setRing(cs.prog)},450);
   const c=$('count');$('cnum').textContent=cs.reps;
   for(const el of[c,$('plus'),$('camStage')]){const k=el===c?'pop':el.id==='plus'?'show':'flash';el.classList.remove(k);void el.offsetWidth;el.classList.add(k)}
-  beep(1320,.12); if($('speak').checked) setTimeout(()=>say(cs.reps),120);
+  beep(1320,.12); if($('speak').checked&&!(wo&&cs.reps>=cs.target)) setTimeout(()=>say(cs.reps),120);
   try{navigator.vibrate&&navigator.vibrate(80)}catch(e){}
+  if(wo&&cs.target&&cs.reps>=cs.target) setTimeout(itemDone,350);
 }
 $('cntGo').onclick=()=>{
   if(!cs) return;
@@ -721,6 +781,114 @@ $('cntReset').onclick=()=>{if(!cs)return;cs.reps=0;cs.prog=0;resetDTW();setRing(
 $('cntBack').onclick=()=>{if(cs&&cs.phase!=='ready')stopCount();cs=null;go('home')};
 const setThr=()=>{const v=+$('sens').value;$('sensTxt').textContent=v<0.3?'strict':v>0.6?'loose':'normal'};
 $('sens').oninput=setThr; setThr();
+
+// ---------- workouts: builder ----------
+let wos=load('rr3_wo',[]), wb=null, wo=null, restTimer=null;
+const mmss=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+const mvName=id=>mvs.find(m=>m.id===id)?.name;
+function openBuilder(w){
+  if(!mvs.length){alertTo($('newWo'),'Record a movement first');return}
+  wb=w?JSON.parse(JSON.stringify(w)):{id:null,name:'',steps:[{mv:mvs[0].id,reps:10}],rounds:3,restEx:60,restSet:60};
+  $('woName').value=wb.name; $('woRounds').value=wb.rounds; $('woRestEx').value=wb.restEx; $('woRestSet').value=wb.restSet;
+  renderSteps(); go('wb');
+}
+function alertTo(b,t){const o=b.textContent;b.textContent=t;setTimeout(()=>b.textContent=o,1800)}
+function renderSteps(){
+  const opts=sel=>mvs.map(m=>`<option value="${+m.id}"${m.id===sel?' selected':''}>${esc(m.name)}</option>`).join('');
+  $('woSteps').innerHTML=wb.steps.map((st,i)=>`<div class="step" data-i="${i}">
+    <select data-f="mv" aria-label="Movement">${mvName(st.mv)?'':'<option selected>Missing movement</option>'}${opts(st.mv)}</select>
+    <input class="num" data-f="reps" type="number" inputmode="numeric" min="1" max="500" value="${+st.reps}" aria-label="Reps">
+    <div class="mvb"><button class="txt" data-m="up" aria-label="Move up"${i?'':' disabled'}>↑</button><button class="txt" data-m="down" aria-label="Move down"${i<wb.steps.length-1?'':' disabled'}>↓</button><button class="txt" data-m="del" aria-label="Remove"${wb.steps.length>1?'':' disabled'}>✕</button></div></div>`).join('');
+  woSummary();
+}
+function readBuilder(){
+  wb.name=$('woName').value.trim(); wb.rounds=Math.max(1,Math.min(20,+$('woRounds').value||1));
+  wb.restEx=Math.max(0,+$('woRestEx').value||0); wb.restSet=Math.max(0,+$('woRestSet').value||0);
+}
+function woSummary(){
+  readBuilder(); const per=wb.steps.reduce((a,s)=>a+(+s.reps||0),0);
+  $('woHint').textContent=`${wb.rounds} × ${wb.steps.length} movements · ${per*wb.rounds} reps in total`;
+}
+$('woSteps').addEventListener('input',ev=>{const row=ev.target.closest('.step');if(!row)return;const st=wb.steps[+row.dataset.i];
+  if(ev.target.dataset.f==='mv') st.mv=+ev.target.value; if(ev.target.dataset.f==='reps') st.reps=Math.max(1,+ev.target.value||1); woSummary()});
+$('woSteps').addEventListener('change',ev=>{if(ev.target.dataset.f==='mv')renderSteps()});
+$('woSteps').onclick=ev=>{const b=ev.target.closest('button[data-m]');if(!b)return;const i=+b.closest('.step').dataset.i,S=wb.steps;
+  if(b.dataset.m==='up'&&i>0)[S[i-1],S[i]]=[S[i],S[i-1]]; if(b.dataset.m==='down'&&i<S.length-1)[S[i+1],S[i]]=[S[i],S[i+1]];
+  if(b.dataset.m==='del'&&S.length>1)S.splice(i,1); renderSteps()};
+$('woAdd').onclick=()=>{const last=wb.steps.at(-1);wb.steps.push({mv:mvs.find(m=>m.id!==last?.mv)?.id??mvs[0].id,reps:10});renderSteps()};
+for(const id of['woRounds','woRestEx','woRestSet']) $(id).oninput=woSummary;
+$('newWo').onclick=()=>openBuilder(null);
+$('woCancel').onclick=()=>{wb=null;go('home')};
+$('woSave').onclick=()=>{
+  readBuilder(); if(wb.steps.some(s=>!mvName(s.mv))){alertTo($('woSave'),'Pick a movement for every row');return}
+  const w={...wb,id:wb.id||Date.now(),name:wb.name||'Workout '+(wos.length+1)};
+  const i=wos.findIndex(x=>x.id===w.id); i>=0?wos[i]=w:wos.push(w); save('rr3_wo',wos); wb=null; go('home');
+};
+
+// ---------- workouts: runner ----------
+async function startWorkout(id){
+  const w=wos.find(x=>x.id===id); if(!w) return;
+  const plan=[]; for(let r=1;r<=w.rounds;r++) w.steps.forEach((st,k)=>{if(mvName(st.mv))plan.push({mv:st.mv,reps:+st.reps,set:r,k})});
+  if(!plan.length) return;
+  wo={w,plan,i:0,got:plan.map(()=>0),t0:Date.now()};
+  $('woTitle').textContent=w.name; $('woCtl').hidden=$('woTip').hidden=false; go('wo'); renderPlan();
+  if(await ensureCam()) beginItem(5);
+}
+function renderPlan(){
+  if(!wo) return; let html='', cur=0;
+  wo.plan.forEach((it,i)=>{
+    if(it.set!==cur){cur=it.set;html+=`<li class="set"><span>Set ${it.set} of ${wo.w.rounds}</span><span></span></li>`}
+    const st=i<wo.i?'ok':i===wo.i?'now':'';
+    html+=`<li class="${st}"><span>${esc(mvName(it.mv))}</span><span>${i<wo.i?wo.got[i]+' / ':i===wo.i&&cs&&cs.phase!=='done'?(cs.reps+' / '):''}${it.reps}</span></li>`;
+  });
+  $('woBody').innerHTML=`<ul class="plan">${html}</ul>`;
+}
+function countdown(sec,then){
+  if(cdTimer)clearInterval(cdTimer); let left=sec; $('big').textContent=left; beep(660);
+  cdTimer=setInterval(()=>{left--; if(left>0){$('big').textContent=left;beep(660)} else {clearInterval(cdTimer);cdTimer=null;$('big').textContent='';beep(1200);say('Go');then()}},1000);
+}
+function beginItem(cd){
+  const it=wo.plan[wo.i], m=mvs.find(x=>x.id===it.mv);
+  cs={m,phase:'cd',reps:0,lastRep:0,prog:0,target:it.reps,label:`Set ${it.set}/${wo.w.rounds} · ${m.name}`}; resetDTW(); setRing(0);
+  $('cnum').textContent=0; $('count').querySelector('small').textContent=`of ${it.reps} · ${m.name}`;
+  msg(cs.label+': get into position'); renderPlan();
+  if(wo.i===0||cd>3) say(`${it.reps} ${m.name}`);
+  countdown(cd,()=>{if(!cs)return;cs.phase='run';cs.lastRep=performance.now();resetDTW()});
+}
+function itemDone(){
+  if(!wo||!cs||cs.phase==='done') return;
+  cs.phase='done'; wo.got[wo.i]=cs.reps; const it=wo.plan[wo.i]; wo.i++; renderPlan();
+  if(wo.i>=wo.plan.length) return finishWorkout();
+  const nx=wo.plan[wo.i], rest=nx.set!==it.set?wo.w.restSet:wo.w.restEx;
+  if(rest>0) startRest(rest,nx); else {say(`Next, ${nx.reps} ${mvName(nx.mv)}`);beginItem(3)}
+}
+function startRest(sec,nx){
+  const end=Date.now()+sec*1000; $('rest').hidden=false; setRing(0);
+  $('restNext').innerHTML=`Next${nx.set!==wo.plan[wo.i-1].set?` · set ${nx.set} of ${wo.w.rounds}`:''}<em>${+nx.reps} × ${esc(mvName(nx.mv))}</em>`;
+  say(`Rest. Next, ${nx.reps} ${mvName(nx.mv)}`); let lastS=-1;
+  const tick=()=>{const left=Math.max(0,Math.ceil((end-Date.now())/1000)); $('restT').textContent=mmss(left);
+    if(left!==lastS&&left<=3&&left>0)beep(660); lastS=left; if(left<=0)endRest()};
+  if(restTimer)clearInterval(restTimer); restTimer=setInterval(tick,200); tick();
+}
+function endRest(){if(restTimer){clearInterval(restTimer);restTimer=null} $('rest').hidden=true; if(wo&&wo.i<wo.plan.length) beginItem(3)}
+$('restSkip').onclick=endRest;
+$('woPlus').onclick=()=>{if(!wo||!cs||cs.phase==='done')return;cs.reps++;$('cnum').textContent=cs.reps;renderPlan();if(cs.reps>=cs.target)itemDone()};
+$('woMinus').onclick=()=>{if(!wo||!cs||cs.phase==='done'||cs.reps<1)return;cs.reps--;$('cnum').textContent=cs.reps;renderPlan()};
+$('woNext').onclick=()=>{if(!wo)return; if(!$('rest').hidden){endRest();return} if(cdTimer){clearInterval(cdTimer);cdTimer=null;$('big').textContent=''} if(cs&&cs.phase!=='done')itemDone()};
+$('woEnd').onclick=()=>{if(!wo)return; if(wo.i<wo.plan.length&&cs&&cs.phase!=='done'){wo.got[wo.i]=cs.reps;wo.i++} finishWorkout(true)};
+function finishWorkout(early){
+  if(restTimer){clearInterval(restTimer);restTimer=null} if(cdTimer){clearInterval(cdTimer);cdTimer=null}
+  $('rest').hidden=true; $('big').textContent=''; if(cs)cs.phase='done';
+  const total=wo.got.reduce((a,b)=>a+b,0), mins=Math.max(1,Math.round((Date.now()-wo.t0)/60000));
+  const per={}; wo.plan.forEach((it,i)=>{if(i<wo.i)per[mvName(it.mv)]=(per[mvName(it.mv)]||0)+wo.got[i]});
+  const detail=Object.entries(per).map(([n,r])=>`${r} ${n}`).join(' · ');
+  if(total){logs.unshift({n:wo.w.name,r:total,d:new Date().toISOString(),x:`${detail} · ${mins} min`});logs=logs.slice(0,100);save('rr3_log',logs)}
+  say(early?'Workout ended':'Workout complete. Well done'); msg(early?'Workout ended':'Workout complete');
+  $('woCtl').hidden=$('woTip').hidden=true;
+  $('woBody').innerHTML=`<div class="sum">${total}</div><p class="hint" style="margin:4px 0 12px">reps in ${mins} min${early?' (ended early)':''}</p><p style="margin:0 0 12px">${esc(detail)}</p><button id="woDone" style="width:100%">Done</button>`;
+  $('woDone').onclick=()=>{wo=null;cs=null;go('home')};
+  wo.i=wo.plan.length;
+}
 
 // ---------- home ----------
 // chronophotograph thumbnail: the rep's poses stacked as one exposure, three-quarter view
@@ -745,8 +913,17 @@ function renderHome(){
     <div class="acts"><button data-a="cnt" data-id="${+m.id}">Count</button><button class="txt" data-a="edit" data-id="${+m.id}">Edit</button><button class="txt" data-a="del" data-id="${+m.id}">Delete</button></div></div>`).join('')
     :'<p class="empty">No movements yet. Record your first one.</p>';
   requestAnimationFrame(()=>document.querySelectorAll('canvas[data-th]').forEach(c=>{const m=mvs.find(x=>x.id===+c.dataset.th);if(m)try{chrono(c,m)}catch(e){}}));
-  $('log').innerHTML=logs.length?logs.map(l=>`<li><span><b>${+l.r}</b> ${esc(l.n)}</span><span>${esc(new Date(l.d).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))}</span></li>`).join(''):'<li><span>No sets logged yet</span><span></span></li>';
+  $('woList').innerHTML=wos.length?wos.map(w=>`<div class="wo"><div class="nm">${esc(w.name)}<small>${+w.rounds} sets · ${w.steps.map(s=>`${+s.reps} ${esc(mvName(s.mv)||'missing')}`).join(', ')} · rest ${mmss(+w.restEx)} / ${mmss(+w.restSet)} between sets</small></div>
+    <div class="acts"><button data-w="go" data-id="${+w.id}">Start</button><button class="txt" data-w="edit" data-id="${+w.id}">Edit</button><button class="txt" data-w="del" data-id="${+w.id}">Delete</button></div></div>`).join('')
+    :'<p class="empty">No workouts yet. Combine your movements into sets.</p>';
+  $('log').innerHTML=logs.length?logs.map(l=>`<li><span><b>${+l.r}</b> ${esc(l.n)}${l.x?`<br><small style="color:var(--dim)">${esc(l.x)}</small>`:''}</span><span>${esc(new Date(l.d).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))}</span></li>`).join(''):'<li><span>No sets logged yet</span><span></span></li>';
 }
+$('woList').onclick=ev=>{
+  const b=ev.target.closest('button[data-w]'); if(!b) return; const id=+b.dataset.id, w=wos.find(x=>x.id===id); if(!w) return;
+  if(b.dataset.w==='go') startWorkout(id);
+  else if(b.dataset.w==='edit') openBuilder(w);
+  else if(b.dataset.w==='del'){ if(b.dataset.sure){wos=wos.filter(x=>x.id!==id);save('rr3_wo',wos);renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
+};
 $('mvList').onclick=ev=>{
   const b=ev.target.closest('button'); if(!b) return; const id=+b.dataset.id, m=mvs.find(x=>x.id===id); if(!m) return;
   if(b.dataset.a==='cnt') startCount(id);
