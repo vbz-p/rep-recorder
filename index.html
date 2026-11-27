@@ -146,7 +146,7 @@ ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:11px}
 </head>
 <body>
 <main>
-<header class="top"><div class="badge"><i></i>rr-1</div><h1>rep recorder</h1><span id="ver">fw 0.12<br>27.11.26 23:20</span></header>
+<header class="top"><div class="badge"><i></i>rr-1</div><h1>rep recorder</h1><span id="ver">fw 0.13<br>27.11.26 23:25</span></header>
 
 <div class="stage" id="camStage" hidden>
   <video id="vid" playsinline muted></video>
@@ -389,7 +389,11 @@ requestAnimationFrame(loop);
 
 // ---------- sound ----------
 function beep(f,d=.1){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.15;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
-function say(t){try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(String(t)))}catch(e){}}
+// always speak English, whatever the phone's language: pick an English voice (US, then UK, then any)
+let enVoice=null;
+function pickVoice(){try{const v=speechSynthesis.getVoices();enVoice=v.find(x=>x.lang==='en-US'&&x.localService)||v.find(x=>x.lang==='en-US')||v.find(x=>x.lang==='en-GB')||v.find(x=>/^en/i.test(x.lang))||null}catch(e){}}
+try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
+function say(t){try{if(!enVoice)pickVoice();speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(t));u.lang=enVoice?.lang||'en-US';if(enVoice)u.voice=enVoice;speechSynthesis.speak(u)}catch(e){}}
 const energy=(a,b)=>a.reduce((s,x,k)=>s+Math.abs(x-b[k]),0);
 
 // ---------- 1 · RECORD ----------
