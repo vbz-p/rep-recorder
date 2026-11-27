@@ -95,6 +95,12 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
 .mv .acts{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
 .mv .acts button:first-child{min-height:38px;padding:0 16px}
 #newWo{width:100%;margin-top:12px}
+.libEntry{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;text-align:left;color:var(--ink);background:var(--panel);min-height:84px;padding:12px;box-shadow:0 3px 0 var(--line),inset 0 0 0 1px #0000000f;border-radius:12px;white-space:normal}
+.libEntry .pv{display:flex;gap:4px}.libEntry .pv canvas{width:44px;height:44px;border-radius:6px;background:var(--lcd)}
+.libEntry .pv em{display:grid;place-items:center;width:44px;height:44px;border-radius:6px;background:var(--or);color:#fff;font:900 26px var(--dot);font-style:normal}
+.libEntry .lt b{display:block;font-size:15px}.libEntry .lt small{color:var(--dim);font-size:11px;font-weight:500}
+.libEntry .go{font-size:20px;color:var(--or)}
+.bar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px}
 .tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:0;padding:5px 5px 7px;border-radius:10px;background:var(--key);color:var(--ink);box-shadow:0 3px 0 var(--line),inset 0 0 0 1px #0000000f;text-align:left;white-space:normal}
 .tile canvas{width:100%;aspect-ratio:1;background:var(--lcd);border-radius:6px;display:block}
@@ -140,7 +146,7 @@ ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:11px}
 </head>
 <body>
 <main>
-<header class="top"><div class="badge"><i></i>rr-1</div><h1>rep recorder</h1><span id="ver">fw 0.11<br>27.11.26 23:10</span></header>
+<header class="top"><div class="badge"><i></i>rr-1</div><h1>rep recorder</h1><span id="ver">fw 0.12<br>27.11.26 23:20</span></header>
 
 <div class="stage" id="camStage" hidden>
   <video id="vid" playsinline muted></video>
@@ -157,18 +163,23 @@ ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:11px}
 
 <!-- HOME -->
 <section data-screen="home">
-  <div class="card">
-    <h2>library <span id="mvCount" style="margin-left:auto;font-weight:500"></span></h2>
-    <input id="mvSearch" type="search" placeholder="search movements" hidden style="margin-bottom:10px">
-    <div id="mvList" class="lib"></div>
-    <div id="mvSheet" hidden></div>
-  </div>
+  <button class="card libEntry" id="openLib"><span class="pv" id="libPv"></span><span class="lt"><b>library</b><small id="libN"></small></span><span class="go">→</span></button>
   <div class="card">
     <h2>Workouts</h2>
     <div id="woList"></div>
     <button class="sec" id="newWo">+ Build a workout</button>
   </div>
   <div class="card"><h2>Log</h2><ul id="log"></ul></div>
+</section>
+
+<!-- LIBRARY -->
+<section data-screen="lib" hidden>
+  <div class="bar"><button class="sec n" id="libBack">← home</button><h2 style="margin:0">library <span id="mvCount" style="margin-left:8px;font-weight:500"></span></h2></div>
+  <div class="card">
+    <input id="mvSearch" type="search" placeholder="search movements" hidden style="margin-bottom:10px">
+    <div id="mvList" class="lib"></div>
+    <div id="mvSheet" hidden></div>
+  </div>
 </section>
 
 <!-- WORKOUT BUILDER -->
@@ -298,7 +309,7 @@ function go(s){
   if(cdTimer){clearInterval(cdTimer);cdTimer=null}
   if(s==='rec'||s==='cnt'||s==='wo'){try{navigator.wakeLock?.request('screen').then(w=>wake=w).catch(()=>{})}catch(e){}}
   else{try{wake&&wake.release()}catch(e){} wake=null}
-  if(s==='home') renderHome();
+  if(s==='home') renderHome(); if(s==='lib') renderLib();
   scrollTo(0,0);
 }
 
@@ -389,7 +400,7 @@ async function startRecord(){
   getHQ().catch(()=>{}); // start downloading the accurate model during setup
 }
 $('mvList').addEventListener('click',ev=>{if(ev.target.closest('#newMv'))startRecord()});
-$('recCancel').onclick=()=>{rs=null;busy=false;stopMR();go('home')};
+$('recCancel').onclick=()=>{rs=null;busy=false;stopMR();go('lib')};
 $('recStop').onclick=()=>{if(rs&&rs.phase==='rec')finishRec()};
 
 function recFrame(s,full){
@@ -728,7 +739,7 @@ $('stepF').onclick=()=>{ed.playing=false;ed.ph=Math.min(ed.n-1,ed.ph+1)};
 $('setS').onclick=()=>{ed.s0=Math.min(ed.ph,ed.s1-5)};
 $('setE').onclick=()=>{ed.s1=Math.max(ed.ph,ed.s0+5)};
 $('redo').onclick=startRecord;
-$('revCancel').onclick=()=>{ed=null;go('home')};
+$('revCancel').onclick=()=>{ed=null;go('lib')};
 
 function resample(arr){
   const out=[],L=arr.length;
@@ -757,7 +768,7 @@ $('save').onclick=()=>{
   const i=mvs.findIndex(x=>x.id===m.id); i>=0?mvs[i]=m:mvs.push(m);
   if(!save('rr3_mv',mvs)){m.frames=m.frames.slice(m.s0,m.s1+1).map(f=>({t:f.t-m.frames[m.s0].t,p:f.p,h:f.h,d:f.d}));m.s1-=m.s0;m.s0=0;
     if(!save('rr3_mv',mvs)){$('rhint').textContent='Phone storage is full. Delete a movement first.';mvs=load('rr3_mv',[]);return}}
-  ed=null; go('home');
+  ed=null; go('lib');
 };
 
 // ---------- 3 · COUNT: streaming subsequence DTW gives rep progress + completion ----------
@@ -827,7 +838,7 @@ function stopCount(){
   cs.phase='ready'; cs.reps=0; cs.prog=0; setRing(0); $('cnum').textContent=0; $('cntGo').textContent='Start'; $('cntGo').className='';
 }
 $('cntReset').onclick=()=>{if(!cs)return;cs.reps=0;cs.prog=0;resetDTW();setRing(0);$('cnum').textContent=0};
-$('cntBack').onclick=()=>{if(cs&&cs.phase!=='ready')stopCount();cs=null;go('home')};
+$('cntBack').onclick=()=>{if(cs&&cs.phase!=='ready')stopCount();cs=null;go('lib')};
 const setThr=()=>{const v=+$('sens').value;$('sensTxt').textContent=v<0.3?'strict':v>0.6?'loose':'normal'};
 $('sens').oninput=setThr; setThr();
 
@@ -957,13 +968,19 @@ function chrono(c,m){
     const hd=P([(f[KI[7]][0]+f[KI[8]][0])/2,(f[KI[7]][1]+f[KI[8]][1])/2]); x.strokeStyle=last?'#ff5a1f':'rgba(255,255,255,.22)'; x.beginPath(); x.arc(...hd,Math.max(3,0.09*k),0,7); x.stroke();
   }
 }
-function renderHome(){
+const drawThumbs=()=>requestAnimationFrame(()=>document.querySelectorAll('canvas[data-th]').forEach(c=>{if(!c.offsetWidth)return;const m=mvs.find(x=>x.id===+c.dataset.th);if(m)try{chrono(c,m)}catch(e){}}));
+function renderLib(){
   const q=$('mvSearch').value.trim().toLowerCase(), list=mvs.filter(m=>!q||m.name.toLowerCase().includes(q));
   $('mvSearch').hidden=mvs.length<=6; $('mvCount').textContent=mvs.length?mvs.length+(mvs.length===1?' movement':' movements'):'';
   $('mvList').innerHTML=list.map(m=>`<button class="tile${m.id===selMv?' sel':''}" data-pick="${+m.id}"><canvas data-th="${+m.id}"></canvas>${m.oneSided?'<i>l/r</i>':''}<span>${esc(m.name)}</span><small>${(m.T/1000).toFixed(1)} s</small></button>`).join('')
     +(q?'':'<button class="tile add" id="newMv"><b>+</b>new</button>');
-  renderSheet();
-  requestAnimationFrame(()=>document.querySelectorAll('canvas[data-th]').forEach(c=>{const m=mvs.find(x=>x.id===+c.dataset.th);if(m)try{chrono(c,m)}catch(e){}}));
+  renderSheet(); drawThumbs();
+}
+function renderHome(){
+  const recent=mvs.slice(-4).reverse();
+  $('libPv').innerHTML=recent.length?recent.map(m=>`<canvas data-th="${+m.id}"></canvas>`).join(''):'<em>+</em>';
+  $('libN').textContent=mvs.length?`${mvs.length} movement${mvs.length===1?'':'s'}`:'record your first movement';
+  drawThumbs();
   $('woList').innerHTML=wos.length?wos.map(w=>`<div class="wo"><div class="nm">${esc(w.name)}<small>${+w.rounds} sets · ${w.steps.map(s=>`${+s.reps} ${esc(mvName(s.mv)||'missing')}`).join(', ')} · rest ${mmss(+w.restEx)} / ${mmss(+w.restSet)} between sets</small></div>
     <div class="acts"><button data-w="go" data-id="${+w.id}">Start</button><button class="txt" data-w="edit" data-id="${+w.id}">Edit</button><button class="txt" data-w="del" data-id="${+w.id}">Delete</button></div></div>`).join('')
     :'<p class="empty">No workouts yet. Combine your movements into sets.</p>';
@@ -981,14 +998,16 @@ function renderSheet(){
   $('mvSheet').innerHTML=`<div class="nm">${esc(m.name)}<small>${(m.T/1000).toFixed(1)} s per rep${m.oneSided?' · one-sided, counts both sides':''}</small></div>
     <div class="acts"><button class="red" data-a="cnt" data-id="${+m.id}">count</button><button class="sec" data-a="edit" data-id="${+m.id}">edit</button><button class="txt" data-a="del" data-id="${+m.id}">delete</button></div>`;
 }
-$('mvSearch').oninput=renderHome;
+$('mvSearch').oninput=renderLib;
+$('openLib').onclick=()=>go('lib');
+$('libBack').onclick=()=>{selMv=null;go('home')};
 $('mvList').addEventListener('click',ev=>{const t=ev.target.closest('[data-pick]');if(!t)return;const id=+t.dataset.pick;selMv=selMv===id?null:id;
   document.querySelectorAll('.tile[data-pick]').forEach(e=>e.classList.toggle('sel',+e.dataset.pick===selMv));renderSheet()});
 $('mvSheet').onclick=ev=>{
   const b=ev.target.closest('button'); if(!b) return; const id=+b.dataset.id, m=mvs.find(x=>x.id===id); if(!m) return;
   if(b.dataset.a==='cnt') startCount(id);
   else if(b.dataset.a==='edit') openEditor(m);
-  else if(b.dataset.a==='del'){ if(b.dataset.sure){mvs=mvs.filter(x=>x.id!==id);save('rr3_mv',mvs);selMv=null;renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
+  else if(b.dataset.a==='del'){ if(b.dataset.sure){mvs=mvs.filter(x=>x.id!==id);save('rr3_mv',mvs);selMv=null;renderLib()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
 };
 go('home');
 }
