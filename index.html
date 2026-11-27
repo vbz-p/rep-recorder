@@ -29,10 +29,6 @@ h1{font:500 15px var(--mono);margin:0;white-space:nowrap}
 h2{font:600 12px var(--mono);margin:0 0 10px;color:var(--dim);display:flex;align-items:center;gap:8px}
 h2::before{content:"";width:6px;height:6px;background:var(--ink);border-radius:1px}
 /* mode keys */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.steps span{display:flex;align-items:center;gap:7px;justify-content:center;font-size:12px;font-weight:600;color:var(--dim);background:var(--key);border-radius:8px;padding:9px 4px;box-shadow:0 2px 0 var(--line),inset 0 0 0 1px #0000000d}
-.steps span::before{content:"";width:6px;height:6px;border-radius:50%;background:#cfcec8}
-.steps span.on{color:var(--ink)}.steps span.on::before{background:var(--or);box-shadow:0 0 6px var(--or)}
 /* displays */
 .stage{position:relative;background:var(--lcd);border-radius:14px;overflow:hidden;aspect-ratio:3/4;margin-bottom:12px;border:7px solid #1c1c1c;box-shadow:0 0 0 1px var(--line),inset 0 0 0 1px #000}
 .stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
@@ -98,8 +94,19 @@ label.ck{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12px
 .mv .nm small{display:block;font-size:11px;font-weight:500;color:var(--dim);margin-top:3px}
 .mv .acts{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
 .mv .acts button:first-child{min-height:38px;padding:0 16px}
-#newMv,#newWo{width:100%;margin-top:12px}
-#newMv{background:var(--or);box-shadow:0 3px 0 #c63d0c}
+#newWo{width:100%;margin-top:12px}
+.lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px}
+.tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:0;padding:5px 5px 7px;border-radius:10px;background:var(--key);color:var(--ink);box-shadow:0 3px 0 var(--line),inset 0 0 0 1px #0000000f;text-align:left;white-space:normal}
+.tile canvas{width:100%;aspect-ratio:1;background:var(--lcd);border-radius:6px;display:block}
+.tile span{font-size:11px;font-weight:600;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.4em;padding:0 2px;overflow-wrap:anywhere}
+.tile small{font-size:10px;color:var(--dim);font-weight:500;padding:0 2px;margin-top:-4px}
+.tile i{position:absolute;right:9px;top:9px;font:700 9px var(--mono);font-style:normal;color:#fff;background:var(--bl);padding:1px 4px;border-radius:3px}
+.tile.sel{box-shadow:0 3px 0 var(--line),inset 0 0 0 2px var(--or)}
+.tile.add{justify-content:center;align-items:center;background:var(--or);color:#fff;box-shadow:0 3px 0 #c63d0c;font-size:12px;min-height:96px}
+.tile.add b{font:900 34px/1 var(--dot)}
+#mvSheet{position:sticky;bottom:max(10px,env(safe-area-inset-bottom));z-index:3;box-shadow:0 8px 24px #0006;margin-top:12px;padding:12px;border-radius:10px;background:var(--lcd);color:#fff;display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+#mvSheet .nm{font-weight:600;font-size:16px}#mvSheet .nm small{display:block;color:#ffffff99;font-size:11px;font-weight:500}
+#mvSheet .acts{display:flex;gap:6px;flex-wrap:wrap}#mvSheet .acts button.txt{color:#ffffffb3}
 ul{list-style:none;padding:0;margin:0}ul li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
 ul li b{font:900 22px/1 var(--dot);color:var(--or);margin-right:4px}
 ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:11px}
@@ -133,8 +140,7 @@ ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:11px}
 </head>
 <body>
 <main>
-<header class="top"><div class="badge"><i></i>rr-1</div><h1>rep recorder</h1><span id="ver">fw 0.10<br>27.11.26 23:20</span></header>
-<div class="steps"><span data-s="rec">1 · Record</span><span data-s="rev">2 · Review</span><span data-s="cnt">3 · Count</span></div>
+<header class="top"><div class="badge"><i></i>rr-1</div><h1>rep recorder</h1><span id="ver">fw 0.11<br>27.11.26 23:10</span></header>
 
 <div class="stage" id="camStage" hidden>
   <video id="vid" playsinline muted></video>
@@ -152,9 +158,10 @@ ul li span:last-child{color:var(--dim);white-space:nowrap;font-size:11px}
 <!-- HOME -->
 <section data-screen="home">
   <div class="card">
-    <h2>Your movements</h2>
-    <div id="mvList"></div>
-    <button id="newMv" style="width:100%;margin-top:12px">+ Record a new movement</button>
+    <h2>library <span id="mvCount" style="margin-left:auto;font-weight:500"></span></h2>
+    <input id="mvSearch" type="search" placeholder="search movements" hidden style="margin-bottom:10px">
+    <div id="mvList" class="lib"></div>
+    <div id="mvSheet" hidden></div>
   </div>
   <div class="card">
     <h2>Workouts</h2>
@@ -286,8 +293,6 @@ const clamp=x=>Math.max(-1,Math.min(1,x));
 function go(s){
   screen=s;
   document.querySelectorAll('[data-screen]').forEach(el=>el.hidden=el.dataset.screen!==s);
-  document.querySelector('.steps').hidden=s==='wb'||s==='wo';
-  document.querySelectorAll('.steps span').forEach(el=>el.classList.toggle('on',el.dataset.s===s));
   $('camStage').hidden=!(s==='rec'||s==='cnt'||s==='wo'); $('rest').hidden=true; $('revStage').hidden=s!=='rev';
   $('count').hidden=$('pbar').hidden=!(s==='cnt'||s==='wo'); $('count').querySelector('small').textContent='reps'; $('recDot').style.display='none'; $('big').textContent='';
   if(cdTimer){clearInterval(cdTimer);cdTimer=null}
@@ -383,7 +388,7 @@ async function startRecord(){
   rs={phase:'aim',okSince:0}; msg('Stand in a T-pose with your whole body in frame');
   getHQ().catch(()=>{}); // start downloading the accurate model during setup
 }
-$('newMv').onclick=startRecord;
+$('mvList').addEventListener('click',ev=>{if(ev.target.closest('#newMv'))startRecord()});
 $('recCancel').onclick=()=>{rs=null;busy=false;stopMR();go('home')};
 $('recStop').onclick=()=>{if(rs&&rs.phase==='rec')finishRec()};
 
@@ -539,51 +544,68 @@ function computeDisp(){
   const v=+$('smooth').value; $('smTxt').textContent=v<0.05?'off':v<0.4?'light':v<0.75?'medium':'strong';
   ed.disp=dispFrames(ed.frames,ed.cal,v);
 }
-// accurate path: up/down + sideways from the image, depth from the model, fixed bone lengths, planted feet
+// accurate path: body shape from the model's 3D pose (levelled, fixed bone lengths);
+// the image decides where the floor is, which feet are planted, and how high the body is when airborne
 const TREE=[[23,25],[25,27],[27,29],[27,31],[24,26],[26,28],[28,30],[28,32],[23,11],[24,12],[11,13],[13,15],[15,17],[15,19],[15,21],[12,14],[14,16],[16,18],[16,20],[16,22]];
 const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]], mdn=a=>{const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
 const midF=(f,a,b)=>scl(add(f[KI[a]],f[KI[b]]),.5), dst=(a,b)=>len(sub(a,b));
-function ik(H,K,A,l1,l2){ // two-bone IK: knee position so thigh/shin keep their length
-  const d=sub(A,H), dl=len(d); if(dl>l1+l2-1e-3) return null;
-  const dir=scl(d,1/dl), a=(l1*l1-l2*l2+dl*dl)/(2*dl), h=Math.sqrt(Math.max(0,l1*l1-a*a));
-  let b=sub(K,H); b=sub(b,scl(dir,dot(b,dir))); b=len(b)<1e-4?[0,0,1]:nrm(b);
-  return add(add(H,scl(dir,a)),scl(b,h));
+const pct=(a,q)=>{const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor(q*(s.length-1)))]};
+const mm=(A,B)=>A.map(r=>B[0].map((_,j)=>r[0]*B[0][j]+r[1]*B[1][j]+r[2]*B[2][j])), mv3=(R,v)=>R.map(r=>r[0]*v[0]+r[1]*v[1]+r[2]*v[2]);
+function rotTo(u,v){ // rotation taking unit vector u onto unit vector v
+  const c=dot(u,v), ax=crs(u,v), sn=len(ax); if(sn<1e-6) return [[1,0,0],[0,1,0],[0,0,1]];
+  const k=scl(ax,1/sn), K=[[0,-k[2],k[1]],[k[2],0,-k[0]],[-k[1],k[0],0]], K2=mm(K,K);
+  return [0,1,2].map(i=>[0,1,2].map(j=>(i===j?1:0)+sn*K[i][j]+(1-c)*K2[i][j]));
 }
+const FEET=[[27,29,31],[28,30,32]];
 function dispHQ(fr,cal,v){
   const n=fr.length;
-  const raw=gauss(fr.map(f=>f.d.map((q,i)=>[(q[0]-cal.x0)*cal.asp*cal.scale,(cal.floor-q[1])*cal.scale,-f.p[i][2]])),v*6);
-  const L=TREE.map(([a,b])=>mdn(raw.map(f=>dst(f[KI[a]],f[KI[b]])))), hipW=mdn(raw.map(f=>dst(f[KI[23]],f[KI[24]])));
-  const neckL=mdn(raw.map(f=>dst(midF(f,11,12),midF(f,7,8))));
-  const out=raw.map(f0=>{
+  // 1. body shape: model 3D pose in metres (hip-centred), smoothed both ways in time
+  let P=gauss(fr.map(f=>f.p.map(q=>[q[0],-q[1],-q[2]])),v*6);
+  // level out camera tilt: when the legs are straight, ankles→shoulders should point straight up
+  const ang3=(f,a,b,c)=>{const u=sub(f[KI[a]],f[KI[b]]),w=sub(f[KI[c]],f[KI[b]]);return Math.acos(clamp(dot(u,w)/(len(u)*len(w))))};
+  const ups=P.filter(f=>[[23,25,27],[24,26,28]].every(([a,b,c])=>ang3(f,a,b,c)>2.75)).map(f=>nrm(sub(midF(f,11,12),midF(f,27,28))));
+  if(ups.length>=5){const u=nrm(ups.reduce(add)); if(u[1]>0.7){const R=rotTo(u,[0,1,0]); P=P.map(f=>f.map(q=>mv3(R,q)))}}
+  // fixed bone lengths (median over the clip)
+  const L=TREE.map(([a,b])=>mdn(P.map(f=>dst(f[KI[a]],f[KI[b]])))), hipW=mdn(P.map(f=>dst(f[KI[23]],f[KI[24]])));
+  const neckL=mdn(P.map(f=>dst(midF(f,11,12),midF(f,7,8))));
+  const out=P.map(f0=>{
     const f=f0.map(q=>q.slice()), hm=midF(f0,23,24), hd=nrm(sub(f0[KI[23]],f0[KI[24]]));
     f[KI[23]]=add(hm,scl(hd,hipW/2)); f[KI[24]]=add(hm,scl(hd,-hipW/2));
     TREE.forEach(([a,b],i)=>{f[KI[b]]=add(f[KI[a]],scl(nrm(sub(f0[KI[b]],f0[KI[a]])),L[i]))});
-    const sh=midF(f,11,12), em0=midF(f0,7,8), em=add(sh,scl(nrm(sub(em0,midF(f0,11,12))),neckL)), off=sub(em,em0);
+    const em0=midF(f0,7,8), em=add(midF(f,11,12),scl(nrm(sub(em0,midF(f0,11,12))),neckL)), off=sub(em,em0);
     for(const k of [0,2,5,7,8]) f[KI[k]]=add(f0[KI[k]],off);
     return f;
   });
-  // plant feet: while a foot is low and still, hold it in place and bend the knee to fit
-  for(const [hip,knee,ank,ft,i1,i2] of [[23,25,27,[29,31],0,1],[24,26,28,[30,32],4,5]]){
-    const g=[ank,...ft], base=raw.map(f=>g.map(k=>f[KI[k]].slice())); let lock=null; // contact judged on the image-based positions
-    for(let i=0;i<n;i++){
-      const low=Math.min(...base[i].map(q=>q[1])), dt=i?Math.max(1,fr[i].t-fr[i-1].t)/1000:1;
-      const spd=i?Math.hypot(base[i][0][0]-base[i-1][0][0],base[i][0][1]-base[i-1][0][1])/dt:0; // image-plane speed (depth is too noisy)
-      if(low<0.07&&spd<0.35){
-        if(!lock) lock=base[i].map(q=>[q[0],q[1]-Math.min(0,low)-Math.max(0,low),q[2]]);
-        const f=out[i], K2=ik(f[KI[hip]],f[KI[knee]],lock[0],L[i1],L[i2]);
-        if(K2){f[KI[knee]]=K2; g.forEach((k,j)=>f[KI[k]]=lock[j].slice())}
-        else{ // leg fully straight: reach toward the planted foot instead of letting it slide
-          const H=f[KI[hip]], dir=nrm(sub(lock[0],H)), A=add(H,scl(dir,L[i1]+L[i2])), off=sub(A,lock[0]);
-          f[KI[knee]]=add(H,scl(dir,L[i1])); g.forEach((k,j)=>f[KI[k]]=add(lock[j],off));
-        }
-      }else lock=null;
+  // 2. from the image: floor line (measured in this clip), planted feet, hip height
+  const scale=cal?.scale||2, asp=cal?.asp||0.75;
+  const D=gauss(fr.map(f=>f.d.map(q=>[q[0],q[1]])),1);
+  const footImg=D.map(d=>FEET.map(g=>Math.max(...g.map(k=>d[KI[k]][1]))));
+  const floor=pct(footImg.map(a=>Math.max(...a)),0.9);
+  const hipImg=D.map(d=>[(d[KI[23]][0]+d[KI[24]][0])/2,(d[KI[23]][1]+d[KI[24]][1])/2]);
+  const contact=D.map((d,i)=>FEET.map((g,s)=>{
+    const j=Math.max(0,i-1), dt=Math.max(1,fr[i].t-fr[j].t)/1000, a=d[KI[g[0]]], b=D[j][KI[g[0]]];
+    return (floor-footImg[i][s])*scale<0.07 && Math.hypot((a[0]-b[0])*asp,a[1]-b[1])*scale/dt<0.45;
+  }));
+  const low=(f,s)=>Math.min(...FEET[s].map(k=>f[KI[k]][1]));
+  // vertical: planted foot exactly on the floor; airborne follows the hips in the image
+  const imgH=hipImg.map(h=>(floor-h[1])*scale), oy=out.map((f,i)=>{const cs=[0,1].filter(s=>contact[i][s]);return cs.length?-Math.min(...cs.map(s=>low(f,s))):null});
+  const bs=oy.map((y,i)=>y==null?null:y-imgH[i]).filter(x=>x!=null), bias=bs.length?mdn(bs):null;
+  for(let i=0;i<n;i++) if(oy[i]==null) oy[i]=bias!=null?imgH[i]+bias:-Math.min(low(out[i],0),low(out[i],1));
+  // horizontal: planted feet hold still; otherwise follow the hips in the image
+  const imgX=hipImg.map(h=>(h[0]-hipImg[0][0])*asp*scale), ox=[], oz=[]; let anchor=[null,null], bx=0;
+  for(let i=0;i<n;i++){
+    let sx=0,sz=0,c=0;
+    for(const s of [0,1]){const ank=out[i][KI[FEET[s][0]]];
+      if(contact[i][s]){ if(!anchor[s]){const rx=i?ox[i-1]:imgX[0],rz=i?oz[i-1]:0; anchor[s]=[rx+ank[0],rz+ank[2]]} sx+=anchor[s][0]-ank[0]; sz+=anchor[s][1]-ank[2]; c++ }
+      else anchor[s]=null;
     }
+    if(c){ox[i]=sx/c;oz[i]=sz/c;bx=ox[i]-imgX[i]} else {ox[i]=imgX[i]+bx;oz[i]=i?oz[i-1]:0}
   }
-  out.forEach(f=>f.forEach(q=>{if(q[1]<0)q[1]=0}));
-  return out;
+  const O=gauss(out.map((_,i)=>[[ox[i],oy[i],oz[i]]]),1.2);
+  return out.map((f,i)=>f.map(q=>add(q,O[i][0])));
 }
 function dispFrames(fr,cal0,v){
-  if(cal0&&fr.length&&fr[0].d) return dispHQ(fr,cal0,v);
+  if(fr.length&&fr[0].d) return dispHQ(fr,cal0,v);
   const n=fr.length, sig=v*6, R=Math.ceil(sig*2.5);
   const ker=[]; for(let k=-R;k<=R;k++) ker.push(sig>0?Math.exp(-(k*k)/(2*sig*sig)):(k===0?1:0));
   const cal=cal0&&fr[0].h?cal0:null;
@@ -936,9 +958,11 @@ function chrono(c,m){
   }
 }
 function renderHome(){
-  $('mvList').innerHTML=mvs.length?mvs.map(m=>`<div class="mv"><canvas data-th="${+m.id}"></canvas><div class="nm">${esc(m.name)}<small>${(m.T/1000).toFixed(1)} s per rep${m.oneSided?' · one-sided, counts both sides':''}</small></div>
-    <div class="acts"><button data-a="cnt" data-id="${+m.id}">Count</button><button class="txt" data-a="edit" data-id="${+m.id}">Edit</button><button class="txt" data-a="del" data-id="${+m.id}">Delete</button></div></div>`).join('')
-    :'<p class="empty">No movements yet. Record your first one.</p>';
+  const q=$('mvSearch').value.trim().toLowerCase(), list=mvs.filter(m=>!q||m.name.toLowerCase().includes(q));
+  $('mvSearch').hidden=mvs.length<=6; $('mvCount').textContent=mvs.length?mvs.length+(mvs.length===1?' movement':' movements'):'';
+  $('mvList').innerHTML=list.map(m=>`<button class="tile${m.id===selMv?' sel':''}" data-pick="${+m.id}"><canvas data-th="${+m.id}"></canvas>${m.oneSided?'<i>l/r</i>':''}<span>${esc(m.name)}</span><small>${(m.T/1000).toFixed(1)} s</small></button>`).join('')
+    +(q?'':'<button class="tile add" id="newMv"><b>+</b>new</button>');
+  renderSheet();
   requestAnimationFrame(()=>document.querySelectorAll('canvas[data-th]').forEach(c=>{const m=mvs.find(x=>x.id===+c.dataset.th);if(m)try{chrono(c,m)}catch(e){}}));
   $('woList').innerHTML=wos.length?wos.map(w=>`<div class="wo"><div class="nm">${esc(w.name)}<small>${+w.rounds} sets · ${w.steps.map(s=>`${+s.reps} ${esc(mvName(s.mv)||'missing')}`).join(', ')} · rest ${mmss(+w.restEx)} / ${mmss(+w.restSet)} between sets</small></div>
     <div class="acts"><button data-w="go" data-id="${+w.id}">Start</button><button class="txt" data-w="edit" data-id="${+w.id}">Edit</button><button class="txt" data-w="del" data-id="${+w.id}">Delete</button></div></div>`).join('')
@@ -951,11 +975,20 @@ $('woList').onclick=ev=>{
   else if(b.dataset.w==='edit') openBuilder(w);
   else if(b.dataset.w==='del'){ if(b.dataset.sure){wos=wos.filter(x=>x.id!==id);save('rr3_wo',wos);renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
 };
-$('mvList').onclick=ev=>{
+let selMv=null;
+function renderSheet(){
+  const m=mvs.find(x=>x.id===selMv); $('mvSheet').hidden=!m; if(!m) return;
+  $('mvSheet').innerHTML=`<div class="nm">${esc(m.name)}<small>${(m.T/1000).toFixed(1)} s per rep${m.oneSided?' · one-sided, counts both sides':''}</small></div>
+    <div class="acts"><button class="red" data-a="cnt" data-id="${+m.id}">count</button><button class="sec" data-a="edit" data-id="${+m.id}">edit</button><button class="txt" data-a="del" data-id="${+m.id}">delete</button></div>`;
+}
+$('mvSearch').oninput=renderHome;
+$('mvList').addEventListener('click',ev=>{const t=ev.target.closest('[data-pick]');if(!t)return;const id=+t.dataset.pick;selMv=selMv===id?null:id;
+  document.querySelectorAll('.tile[data-pick]').forEach(e=>e.classList.toggle('sel',+e.dataset.pick===selMv));renderSheet()});
+$('mvSheet').onclick=ev=>{
   const b=ev.target.closest('button'); if(!b) return; const id=+b.dataset.id, m=mvs.find(x=>x.id===id); if(!m) return;
   if(b.dataset.a==='cnt') startCount(id);
   else if(b.dataset.a==='edit') openEditor(m);
-  else if(b.dataset.a==='del'){ if(b.dataset.sure){mvs=mvs.filter(x=>x.id!==id);save('rr3_mv',mvs);renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
+  else if(b.dataset.a==='del'){ if(b.dataset.sure){mvs=mvs.filter(x=>x.id!==id);save('rr3_mv',mvs);selMv=null;renderHome()} else {b.dataset.sure=1;b.textContent='Sure?';b.className='red'} }
 };
 go('home');
 }
